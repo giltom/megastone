@@ -1,11 +1,16 @@
 import unicorn
 import keystone
 import capstone
+import capstone.arm_const
 
 from .architecture import Architecture, Endian
+from .regs import RegisterSet
 
 
 CPSR_THUMB_MASK = 1 << 5
+
+
+ARM_REGS = RegisterSet.from_libs('arm')
 
 
 class ARMArchitecture(Architecture):
@@ -27,18 +32,17 @@ class ARMArchitecture(Architecture):
             insn_alignment=min_insn_size,
             min_insn_size=min_insn_size,
             max_insn_size=4,
-            pc_reg='pc',
-            sp_reg='sp',
-            retval_reg='r0',
-            lr_reg='lr',
+            regs=ARM_REGS,
+            pc_reg=ARM_REGS.pc,
+            sp_reg=ARM_REGS.sp,
+            retval_reg=ARM_REGS.r0,
+            retaddr_reg=ARM_REGS.lr,
             ks_arch=keystone.KS_ARCH_ARM,
             ks_mode=ks_mode,
             cs_arch=capstone.CS_ARCH_ARM,
             cs_mode=cs_mode,
             uc_arch=unicorn.UC_ARCH_ARM,
-            uc_mode=uc_mode,
-            uc_reg_prefix='UC_ARM_REG_',
-            uc_const_module=unicorn.arm_const
+            uc_mode=uc_mode
         )
     
     def update_arch(self, regs):
@@ -60,7 +64,7 @@ Architecture.register(ARCH_ARM)
 ARCH_THUMB = ARMArchitecture(
     name='thumb',
     alt_names=['arm-thumb', 'armthumb'],
-    min_insn_size=4,
+    min_insn_size=2,
     ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,
     cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN,
     uc_mode=unicorn.UC_MODE_THUMB | unicorn.UC_MODE_LITTLE_ENDIAN

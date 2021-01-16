@@ -7,6 +7,9 @@ import capstone
 import unicorn
 
 
+from .regs import Register, RegisterSet
+
+
 class Endian(enum.Enum):
     LITTLE = 'little'
     BIG = 'big'
@@ -48,11 +51,12 @@ class Architecture:
     min_insn_size: int      #Size of smallest instruction
     max_insn_size: int      #Size of largest instruction
 
-    pc_reg: str                         #Name of program counter register
-    sp_reg: str                         #Name of stack pointer register
-    retval_reg: str                     #Name of register containing return value
-    lr_reg: str                         #Name of link register, None if there is no link register (retaddr is on the stack)
-    has_lr_reg: bool = derived_field()  #Does this arch have a link register?
+    regs: RegisterSet = None            #Register set (can be None if disassembly/emulation aren't supported)
+    pc_reg: Register = None             #Program counter register
+    sp_reg: Register = None             #Stack pointer register
+    retaddr_reg: Register = None        #Name of register containing return address (if None, retaddr is stored on the stack).
+    retval_reg: Register = None         #Name of register containing return value
+    has_retaddr_reg: bool = derived_field() #Is the return address stored in a register?
     
     ks_arch: int = None                     #Keystone arch ID, None if keystone isn't supported
     ks_mode: int = 0                        #Keystone mode ID
@@ -66,8 +70,6 @@ class Architecture:
 
     uc_arch: int = None                         #Unicorn arch ID, None if unicorn isn't supported
     uc_mode: int = 0                            #Unicorn mode ID
-    uc_reg_prefix: str = None                   #Prefix of Unicorn register names (e.g. 'UC_X_REG_')
-    uc_const_module: object = None              #Module containing unicorn constants
     uc_supported: bool = derived_field()        #Unicorn supports this arch?
 
 
@@ -115,7 +117,7 @@ class Architecture:
     def __post_init__(self):
         self.word_size = self.bits // 8
 
-        self.has_lr_reg = self.lr_reg is not None
+        self.has_retaddr_reg = self.retaddr_reg is not None
 
         self.ks_supported = self.ks_arch is not None
         if self.ks_supported:
@@ -170,21 +172,6 @@ class Architecture:
         """Disassemble and return the first instruction in the given code."""
         result = list(self.disassemble(code, address=address, count=1))
         return result[0]
-
-    def uc_reg_name(self, reg_name):
-        """Return the Unicorn name of the given register."""
-        return self.uc_reg_prefix + reg_name.upper()
-
-    def uc_reg_id(self, reg_name):
-        """
-        Return the Unicorn register ID of the register with the given name.
-        
-        Raise ValueError if the register name is invalid.
-        """
-        try:
-            return getattr(self.uc_const_module, self.uc_reg_name(reg_name))
-        except AttributeError as e:
-            raise ValueError(f'Invalid register name "{reg_name}"') from e
 
     def __repr__(self):
         return f"<Architecture '{self.name}'>"
