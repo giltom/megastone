@@ -31,4 +31,6 @@ class Disassembler:
     def disassemble_one(self, code, address=0):
         """Disassemble and return the first instruction in the given code."""
         result = list(self.disassemble(code, address=address, count=1))
+        if len(result) == 0:
+            raise ValueError('Invalid instruction')
         return result[0]
