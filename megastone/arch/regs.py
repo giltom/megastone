@@ -3,6 +3,8 @@ import importlib
 
 import unicorn
 
+INVALID_REG_NAMES = ['invalid']
+
 class Register:
     """Configuration of a single CPU register"""
 
@@ -19,6 +21,8 @@ def _reg_ids_from_module(module, prefix):
     for attr, value in module.__dict__.items():
         if attr.startswith(prefix):
             reg_name = attr[len(prefix):].lower()
+            if reg_name in INVALID_REG_NAMES:
+                continue
             reg_ids[reg_name] = value
     return reg_ids
 
@@ -68,6 +72,9 @@ class RegisterSet:
 
     def __iter__(self):
         yield from self._regs.values()
+
+    def names(self):
+        yield from self._regs
 
     def __len__(self):
         return len(self._regs)

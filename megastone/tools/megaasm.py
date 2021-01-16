@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from megastone import Architecture
+from megastone import Architecture, Assembler, Disassembler
 from .util import parse_hex_int, hex_spaces
 
 def main():
@@ -16,7 +16,10 @@ def main():
         assembly = ' '.join(args.assembly)
     else:
         assembly = sys.stdin.read()
-    code = args.arch.assemble(assembly, address=args.address)
+
+    assembler = Assembler(args.arch)
+    code = assembler.assemble(assembly, address=args.address)
+    
     if not args.binary:
         code = hex_spaces(code).encode() + b'\n'
     sys.stdout.buffer.write(code)

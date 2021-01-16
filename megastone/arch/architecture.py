@@ -2,8 +2,6 @@ from dataclasses import dataclass, field, MISSING
 import enum
 import platform
 
-import keystone
-import capstone
 import unicorn
 
 
@@ -51,26 +49,26 @@ class Architecture:
     min_insn_size: int      #Size of smallest instruction
     max_insn_size: int      #Size of largest instruction
 
-    regs: RegisterSet = None            #Register set (can be None if disassembly/emulation aren't supported)
-    pc_reg: Register = None             #Program counter register
-    sp_reg: Register = None             #Stack pointer register
-    retaddr_reg: Register = None        #Name of register containing return address (if None, retaddr is stored on the stack).
-    retval_reg: Register = None         #Name of register containing return value
+    word_size: int  = derived_field()       #Number of bytes in a word
+
+    regs: RegisterSet = None                #Register set (can be None if disassembly and emulation aren't supported)
+    pc_reg: Register = None                 #Program counter register
+    sp_reg: Register = None                 #Stack pointer register
+    retaddr_reg: Register = None            #Name of register containing return address (if None, retaddr is stored on the stack).
+    retval_reg: Register = None             #Name of register containing return value
     has_retaddr_reg: bool = derived_field() #Is the return address stored in a register?
     
     ks_arch: int = None                     #Keystone arch ID, None if keystone isn't supported
     ks_mode: int = 0                        #Keystone mode ID
     ks_supported: bool = derived_field()    #Keystone supports this arch?
-    ks: keystone.Ks = derived_field(None)   #Keystone object
 
     cs_arch: int = None                     #Capstone arch ID, None if capstone isn't supported
     cs_mode: int = 0                        #Capstone mode ID
     cs_supported: bool = derived_field()    #Capstone supports this arch?
-    cs: capstone.Cs = derived_field(None)   #Capstone object
 
-    uc_arch: int = None                         #Unicorn arch ID, None if unicorn isn't supported
-    uc_mode: int = 0                            #Unicorn mode ID
-    uc_supported: bool = derived_field()        #Unicorn supports this arch?
+    uc_arch: int = None                     #Unicorn arch ID, None if unicorn isn't supported
+    uc_mode: int = 0                        #Unicorn mode ID
+    uc_supported: bool = derived_field()    #Unicorn supports this arch?
 
 
     _arches = []    #List of registered architectures (class variable)
@@ -116,18 +114,9 @@ class Architecture:
 
     def __post_init__(self):
         self.word_size = self.bits // 8
-
         self.has_retaddr_reg = self.retaddr_reg is not None
-
         self.ks_supported = self.ks_arch is not None
-        if self.ks_supported:
-            self.ks = keystone.Ks(self.ks_arch, self.ks_mode)
-
         self.cs_supported = self.cs_arch is not None
-        if self.cs_supported:
-            self.cs = capstone.Cs(self.cs_arch, self.cs_mode)
-            self.cs.detail = True
-
         self.uc_supported = self.uc_arch is not None
 
     def create_uc(self):
@@ -143,35 +132,6 @@ class Architecture:
         if len(data) != self.word_size:
             raise ValueError(f'Invalid word length {len(data)}, expected {self.word_size}')
         return self.endian.decode_int(data, signed=signed)
-    
-    def assemble(self, assembly, address=0):
-        """
-        Assemble the given instructions and return the assembled bytes.
-
-        `address`, if given, is the base address of the instructions.
-        """
-        if not self.ks_supported:
-            raise RuntimeError('Architecute isn\'t supported by keystone')
-        data, _ = self.ks.asm(assembly, addr=address, as_bytes=True)
-        if data is None:
-            raise ValueError('Invalid assembly')
-        return data
-    
-    def disassemble(self, code, address=0, *, count=0):
-        """
-        Disassemble the given machine code and yield assembly instructions.
-
-        `address` - The base address of the code.
-        `count` - Maximum number of instructions to disassemble (if not given - unlimited)
-        """
-        if not self.cs_supported:
-            raise RuntimeError('Architecute isn\'t supported by capstone') 
-        yield from self.cs.disasm(code, offset=address, count=count)
-
-    def disassemble_one(self, code, address=0):
-        """Disassemble and return the first instruction in the given code."""
-        result = list(self.disassemble(code, address=address, count=1))
-        return result[0]
 
     def __repr__(self):
         return f"<Architecture '{self.name}'>"

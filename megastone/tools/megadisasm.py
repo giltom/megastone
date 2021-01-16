@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from megastone import Architecture
+from megastone import Architecture, Disassembler
 from .util import parse_hex_int
 
 def main():
@@ -18,10 +18,10 @@ def main():
         code = sys.stdin.buffer.read()
     if not args.binary:
         code = bytes.fromhex(code.decode())
-    for insn in args.arch.disassemble(code, address=args.address):
-        print(f'{insn.address=} {insn.size=} {insn.bytes=} {insn.mnemonic=} {insn.op_str=} {insn.operands=}')
-        for op in insn.operands:
-            print(f'{op.type=} {op.value=}')
+    
+    disassembler = Disassembler(args.arch, detailed=False)
+    for insn in disassembler.disassemble(code, address=args.address):
+        print(f'{insn.address=} {insn.size=} {insn.bytes=} {insn.mnemonic=} {insn.op_str=}')
 
 if __name__ == '__main__':
     main()
