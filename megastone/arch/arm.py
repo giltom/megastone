@@ -5,38 +5,27 @@ import capstone.arm_const
 
 from .architecture import Architecture, Endian
 from .regs import RegisterSet
+from .isa import InstructionSet
 
 
 CPSR_THUMB_MASK = 1 << 5
 
 
-ARM_REGS = RegisterSet.from_libs('arm')
-
-
-class ARMArchitecture(Architecture):
-    """Base class for 32-bit ARM architectures."""
-
+class ARMInstructionSet(InstructionSet):
     def __init__(self, *,
-        name,
-        alt_names,
-        min_insn_size,
-        ks_mode,
-        cs_mode,
-        uc_mode
+        name: str,
+        alt_names: tuple = (),
+        min_insn_size: int,
+        ks_mode: int,
+        cs_mode: int,
+        uc_mode: int
     ):
         super().__init__(
             name=name,
             alt_names=alt_names,
-            bits=32,
-            endian=Endian.LITTLE,
             insn_alignment=min_insn_size,
             min_insn_size=min_insn_size,
             max_insn_size=4,
-            regs=ARM_REGS,
-            pc_reg=ARM_REGS.pc,
-            sp_reg=ARM_REGS.sp,
-            retval_reg=ARM_REGS.r0,
-            retaddr_reg=ARM_REGS.lr,
             ks_arch=keystone.KS_ARCH_ARM,
             ks_mode=ks_mode,
             cs_arch=capstone.CS_ARCH_ARM,
@@ -44,14 +33,37 @@ class ARMArchitecture(Architecture):
             uc_arch=unicorn.UC_ARCH_ARM,
             uc_mode=uc_mode
         )
-    
-    def update_arch(self, regs):
-        if regs['cpsr'] & CPSR_THUMB_MASK:
-            return ARCH_THUMB
-        return ARCH_ARM
+
+class ARMArchitecture(Architecture):
+    """Base class for 32-bit ARM architectures."""
+
+    def __init__(self, *,
+        name: str,
+        alt_names: tuple = (),
+        endian: Endian,
+        arm_isa: InstructionSet,
+        thumb_isa: InstructionSet
+    ):
+        isas = [isa for isa in [arm_isa, thumb_isa] if isa is not None]
+        super().__init__(
+            name=name,
+            alt_names=alt_names,
+            bits=32,
+            endian=endian,
+            isas=isas,
+            regs=ARM_REGS,
+            pc_reg=ARM_REGS.pc,
+            sp_reg=ARM_REGS.sp,
+            retval_reg=ARM_REGS.r0,
+            retaddr_reg=ARM_REGS.lr
+        )
+        self.arm = arm_isa
+        self.thumb = thumb_isa
 
 
-ARCH_ARM = ARMArchitecture(
+ARM_REGS = RegisterSet.from_libs('arm')
+
+ISA_ARM = ARMInstructionSet(
     name='arm',
     alt_names=['arm32', 'armle'],
     min_insn_size=4,
@@ -59,14 +71,19 @@ ARCH_ARM = ARMArchitecture(
     cs_mode=capstone.CS_MODE_ARM | capstone.CS_MODE_LITTLE_ENDIAN,
     uc_mode=unicorn.UC_MODE_ARM | unicorn.UC_MODE_LITTLE_ENDIAN
 )
-Architecture.register(ARCH_ARM)
 
-ARCH_THUMB = ARMArchitecture(
+ISA_THUMB = ARMInstructionSet(
     name='thumb',
-    alt_names=['arm-thumb', 'armthumb'],
     min_insn_size=2,
     ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,
     cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN,
     uc_mode=unicorn.UC_MODE_THUMB | unicorn.UC_MODE_LITTLE_ENDIAN
 )
-Architecture.register(ARCH_THUMB)
+
+ARCH_ARM = ARMArchitecture(
+    name='arm',
+    alt_names=['arm32', 'armle'],
+    endian=Endian.LITTLE,
+    arm_isa=ISA_ARM,
+    thumb_isa=ISA_THUMB
+)

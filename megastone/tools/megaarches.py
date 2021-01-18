@@ -10,12 +10,16 @@ def yes_no(val):
 
 def main():
     print(f'Native: {Architecture.native().name}')
-    print('Supported:')
+    print('Supported:\n')
     for arch in Architecture.all():
         alt_names = ', '.join(arch.alt_names)
         print(f'{arch.name} ({alt_names})')
         print(f'    bits: {arch.bits}  endian: {arch.endian.name.lower()}  registers: {len(arch.regs)}')
-        print(f'    assemble: {yes_no(arch.ks_supported)}  disassemble: {yes_no(arch.cs_supported)}  emulate: {yes_no(arch.uc_supported)}')
+        print(f'    instruction sets:')
+        for isa in arch.isas:
+            alt_names = ', '.join(isa.alt_names)
+            print(f'        {isa.name} ({alt_names}):  KS: {yes_no(isa.ks_supported)}  CS: {yes_no(isa.cs_supported)}  UC: {yes_no(isa.uc_supported)}')
+        print()
 
 
 if __name__ == '__main__':

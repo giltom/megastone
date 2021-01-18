@@ -3,14 +3,14 @@ import keystone
 import capstone
 import capstone.x86_const
 
-from .architecture import Architecture, Endian
+from .architecture import SimpleArchitecture, Endian
 from .regs import RegisterSet
 
 
 X86_REGS = RegisterSet.from_libs('x86')
 
 
-class X86Architecture(Architecture):
+class X86Architecture(SimpleArchitecture):
     """X86-family architecture"""
 
     def __init__(self, *,
@@ -56,7 +56,7 @@ ARCH_X86_16 = X86Architecture(
     cs_mode=capstone.CS_MODE_16,
     uc_mode=unicorn.UC_MODE_16
 )
-Architecture.register(ARCH_X86_16)
+ISA_X86_16 = ARCH_X86_16.isa
 
 ARCH_X86 = X86Architecture(
     name='x86',
@@ -69,7 +69,7 @@ ARCH_X86 = X86Architecture(
     cs_mode=capstone.CS_MODE_32,
     uc_mode=unicorn.UC_MODE_32
 )
-Architecture.register(ARCH_X86)
+ISA_X86 = ARCH_X86.isa
 
 ARCH_X86_64 = X86Architecture(
     name='x86-64',
@@ -82,4 +82,4 @@ ARCH_X86_64 = X86Architecture(
     cs_mode=capstone.CS_MODE_64,
     uc_mode=unicorn.UC_MODE_64
 )
-Architecture.register(ARCH_X86_64)
+ISA_X86_64 = ARCH_X86_64.isa

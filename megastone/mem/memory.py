@@ -1,7 +1,7 @@
 import abc
 from pathlib import Path
 
-from megastone import Architecture, Assembler, Disassembler
+from megastone import Architecture
 
 
 class Memory(abc.ABC):
@@ -9,8 +9,7 @@ class Memory(abc.ABC):
 
     def __init__(self, arch: Architecture, *, verbose=False):
         self.arch = arch
-        self._assembler = Assembler(arch)
-        self._disassembler = Disassembler(arch)
+        self.isa = arch.isa
         self.verbose = verbose
 
     @abc.abstractmethod
@@ -109,14 +108,14 @@ class Memory(abc.ABC):
     
     def write_code(self, address, assembly):
         """Assemble the given instructions and write them to the address."""
-        code = self._assembler.assemble(assembly, address)
+        code = self.isa.assemble(assembly, address)
         self.log(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
     
     def disassemble_one(self, address):
         """Disassemble the instruction at the given address and return it."""
         code = self.read(address, self.arch.max_insn_size)
-        return self._disassembler.disassemble_one(code, address)
+        return self.isa.disassemble_one(code, address)
     
     def disassemble(self, address, count):
         """Disassemble `count` instructions at the given address and return an iterator over the disassembled instructions."""
