@@ -1,5 +1,9 @@
 import abc
 from pathlib import Path
+import enum
+from dataclasses import dataclass
+import io
+import shutil
 
 from megastone import Architecture
 
@@ -7,10 +11,10 @@ from megastone import Architecture
 class Memory(abc.ABC):
     """Abstract class representing a memory space."""
 
-    def __init__(self, arch: Architecture, *, verbose=False):
+    def __init__(self, arch: Architecture):
         self.arch = arch
         self.isa = arch.isa
-        self.verbose = verbose
+        self.verbose = False
 
     @abc.abstractmethod
     def write_data(self, address, data):
@@ -22,7 +26,7 @@ class Memory(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def read_data(self, address, size):
+    def read_data(self, address, size) -> bytes:
         """
         Read bytes from the given address.
         
@@ -30,13 +34,9 @@ class Memory(abc.ABC):
         """
         pass
 
-    def log(self, s):
-        """Log a message if in verbose mode"""
-        if self.verbose:
-            print(f'[+] {s}')
-
     def write(self, address, data):
-        self.log(f'Write 0x{len(data):X} bytes to 0x{address:X}')
+        if self.verbose:
+            print(f'Write 0x{len(data):X} bytes to 0x{address:X}')
         self.write_data(address, data)
     
     def read(self, address, size):
@@ -109,7 +109,8 @@ class Memory(abc.ABC):
     def write_code(self, address, assembly):
         """Assemble the given instructions and write them to the address."""
         code = self.isa.assemble(assembly, address)
-        self.log(f'Assemble "{assembly}" => {code.hex().upper()}')
+        if self.verbose:
+            print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
     
     def disassemble_one(self, address):
@@ -124,10 +125,47 @@ class Memory(abc.ABC):
             yield inst
             address += inst.size
 
+    def create_fileobj(self, address, size):
+        """Get a virtual file object exposing a memory range."""
+        return MemoryIO(self, address, size)
+
+    def write_fileobj(self, address, fileobj):
+        """Write data from the file object to the given address."""
+        dest = self.create_fileobj(address, 0)
+        shutil.copyfileobj(fileobj, dest)
+
     def write_file(self, address, path):
         """Write the file at the given path to memory."""
-        data = Path(path).read_bytes()
-        self.write(address, data)
+        with Path(path).open('rb') as fileobj:
+            self.write_fileobj(address, fileobj)
+
+    def dump_to_fileobj(self, address, size, fileobj):
+        """Write data from memory to a file object."""
+        src = self.create_fileobj(address, size)
+        shutil.copyfileobj(src, fileobj)
+
+    def dump_to_file(self, address, size, path):
+        """Dump bytes at the given area to the given path."""
+        with Path(path).open('wb') as fileobj:
+            self.dump_to_fileobj(address, size, fileobj)
+
+    def search(self, start, size, value, *, alignment=1):
+        """
+        Search a memory range for the given value and return the address it was found at, or None if not found.
+
+        It might be a good idea to override this in a subclass if a more efficient implementation is available.
+        """
+        #In the future it may be needed to improve performance by reading in chunks
+        data = self.read(start, size)
+        search_start = 0
+        while True:
+            offset = data.find(value, start=search_start)
+            if offset == -1:
+                return None
+            if offset % alignment == 0:
+                return start + offset
+            search_start = offset + 1
+
 
     def __getitem__(self, key):
         #Expose memory as a bytes-like object, so we can write e.g. memory[0x4:0x8]
@@ -159,20 +197,289 @@ class Memory(abc.ABC):
             raise ValueError('Slice start and end must be specified for memory objects')
 
 
-class MappableMemory(Memory):
-    """Abstract Memory subclass that supports allocating memory at arbitrary addresses."""
+class MemoryIO(io.RawIOBase):
+    """BufferedIOBase implementation that exposes a specific memory region as a file object."""
+    def __init__(self, mem : Memory, start, size):
+        self._mem = mem
+        self._start = start
+        self._size = size
+
+        self._closed = False
+        self._offset = 0
+
+    """
+    def close(self):
+        self.closed = True
+
+    @property
+    def closed(self):
+        return self._closed
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *exc):
+        self.close()
+    """
+    
+    """
+    def flush(self):
+        pass
+    
+    def isatty(self):
+        return False
+    """
+    """
+    def readable(self):
+        return True
+    """
+    def seekable(self):
+        return True
+    
+    def tell(self):
+        return self._offset
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        if whence == io.SEEK_SET:
+            new_offset = offset
+        elif whence == io.SEEK_CUR:
+            new_offset = self._offset + offset
+        elif whence == io.SEEK_END:
+            new_offset = self._size + offset
+        else:
+            raise ValueError('Invalid seek type')
+
+        if new_offset < 0:
+            raise ValueError('Invalid seek offset')
+        self._offset = new_offset
+
+    def truncate(self, size=None):
+        if size is None:
+            size = self._offset
+        self._size = size
+
+    def read(self, size=-1):
+        if self._offset >= self._size:
+            return b''
+
+        if size == -1 or self._offset + size > self._size:
+            size = self._size - self._offset
+
+        data = self._mem.read(self._start + self._offset, size)
+        self._offset += size
+        return data
+    
+    def write(self, b):
+        end_offset = self._offset + len(b)
+        if end_offset > self._size:
+            self._size = end_offset
+
+        self._mem.write(self._start + self._offset, b)
+        self._offset = end_offset
+
+
+
+class Permissions(enum.Flag):
+    """Memory permissions"""
+
+    NONE = 0
+    R = enum.auto()
+    W = enum.auto()
+    X = enum.auto()
+
+    RW = R | W
+    RX = R | X
+    RWX = R | W | X
+
+    @property
+    def readable(self):
+        return bool(self & Permissions.R)
+
+    @property
+    def writable(self):
+        return bool(self & Permissions.W)
+
+    @property
+    def executable(self):
+        return bool(self & Permissions.X)
+
+    def contains(self, other):
+        """Return True if these Permissions contain all of the permissions in other."""
+        return self & other == other
+
+    @classmethod
+    def parse(cls, string):
+        """Parse a string of the form "rwx" and return a Permissions."""
+        total = cls.NONE
+        for c in string:
+            try:
+                perm = cls[c.upper()]
+            except KeyError:
+                pass
+            else:
+                total |= perm
+        return total
+
+    @classmethod
+    def __str__(self):
+        res = ''
+        for c in 'RWX':
+            if self & Permissions[c]:
+                res += c
+        return res
+        
+
+@dataclass(frozen=True, repr=False)
+class Segment:
+    """Represents an area of memory."""
+
+    name: str
+    start: int
+    size: int
+    perms: Permissions
+    mem: Memory
+
+    @property
+    def end(self):
+        return self.start + self.size
+    
+    def __repr__(self):
+        return f"<Segment '{self.name}' at 0x{self.start:X}-0x{self.end:X}, {self.perms}>"
+
+    def overlaps(self, other):
+        """Return True if this segment overlaps other."""
+        return self.start < other.end and other.start < self.end
+
+    def adjacent(self, other):
+        """Return True if this segment overlaps other or is immediately next to it (with no gap)."""
+        return self.start <= other.end and other.start <= self.end
+
+    def contains_address(self, address):
+        return self.start <= address < self.end
+
+    def contains(self, other):
+        """Return True if this segments contains the other segment."""
+        return self.start <= other.start and other.end <= self.end
+
+    def get_start(self):
+        return self.start
+    
+    def get_size(self):
+        return self.size
+    
+    def get_end(self):
+        return self.end
+
+    def read(self):
+        """Read and return the entire segment data."""
+        return self.mem.read(self.start, self.size)
+
+    def write(self, data):
+        """Write the given data to the start of the segment."""
+        self.mem.write(self.start, data) 
+
+    def write_file(self, path):
+        """Write the file at the given path to the segment."""
+        return self.mem.write_file(self.start, path)
+
+    def dump_to_file(self, path):
+        """Dump the entire segment to the given path."""
+        return self.mem.dump_to_file(self.start, self.size, path)
+
+    def create_fileobj(self):
+        """Get a virtual file object exposing the segment as a file."""
+        return self.mem.create_fileobj(self.start, self.size)
+
+    def search(self, value, *, alignment=1):
+        """Search the segment for bytes, returning the found address or None if not found."""
+        return self.mem.search(self.start, self.size, value, alignment=alignment)
+
+
+class SegmentMemory(Memory):
+    """
+    Memory that supports Segments.
+
+    Each Segment is a named range of memory with access its own permissions
+    (names and/or permissions may be meaningless in some contexes).
+    Segments are not allowed to overlap.
+    """
+
+    def __init__(self, arch: Architecture):
+        super().__init__(arch)
+        self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
+
+    def get_segments(self, perms=Permissions.NONE):
+        """
+        Return an iterable of all segments.
+
+        if perms is given, only return segments that have all of the given permissions.
+        """
+        return (seg for seg in self._segments.values() if seg.perms.contains(perms))
+    
+    def get_segment(self, name=None, *, address=None) -> Segment:
+        """
+        Return the segment with the given name.
+        
+        If address is given instead of name, return the segment that contains the given address.
+        Raise KeyError if not found.
+        """
+        if (name is None) == (address is None):
+            raise ValueError('Exactly one of name and address must be given')
+        
+        if name is not None:
+            return self._segments[name]
+        
+        for segment in self._segments.values():
+            if segment.contains_address(address):
+                return segment
+        raise KeyError('Segment not found')
+
+    def search_all(self, value, *, alignment=None, perms=Permissions.NONE):
+        """
+        Search all segments for bytes, returning the found address or None if not found.
+        
+        If perms is given, search only segments with the given permissions.
+        """
+        for seg in self.get_segments(perms):
+            result = seg.search(value, alignment=alignment)
+            if result is not None:
+                return result
+        return None
+
+    def search_code(self, assembly):
+        """Search for the given assembly instructions in all executable segments."""
+        code = self.isa.assemble(assembly)
+        return self.search_all(code, alignment=self.isa.insn_alignment, perms=Permissions.X)
+
+    def _add_segment(self, seg):
+        #Call in a subclass to initialize segments
+        for old_seg in self.get_segments():
+            if old_seg.overlaps(seg):
+                raise ValueError('Segment overlap')
+
+        self._segments[seg.name] = seg
+        return seg
+
+
+class MappableMemory(SegmentMemory):
+    """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
 
     @abc.abstractmethod
-    def map(self, address, size):
-        """Allocate new memory, initialized to 0, at the given address range."""
-        pass
+    def map(self, name, start, size, perms=Permissions.RWX) -> Segment:
+        """
+        Allocate a new Segment, initialized to 0, at the given address range.
+        
+        Returns the new Segment.
+        """
+        #Implementation should call _add_segment() and also any other needed maintenance....
 
-    def load(self, address, data):
+    def load(self, name, address, data, perms=Permissions.RWX) -> Segment:
         """Shorthand for map() followed by write()."""
-        self.map(address, len(data))
-        self.write(address, data)
+        return self.map(name, address, len(data), perms).write(data)
     
-    def load_file(self, address, path):
+    def load_file(self, name, address, path, perms=Permissions.RWX) -> Segment:
         """Load the file at the given path."""
-        data = Path(path).read_bytes()
-        self.load(address, data)
+        #Currently we read the entire file at once bc we need to know the file size in advance
+        #If performance becomes a problem this can be improved by using seek() and write_fileobj()
+        data = Path(path).read_bytes() 
+        return self.load(name, address, data, perms)

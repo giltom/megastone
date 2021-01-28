@@ -1,2 +1,2 @@
-from .memory import Memory
-from .buffer_memory import BufferMemory, BinaryImage
+from .memory import Memory, Permissions, Segment
+from .buffer_memory import BufferMemory
