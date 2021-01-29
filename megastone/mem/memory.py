@@ -201,41 +201,14 @@ class Memory(abc.ABC):
 
 
 class MemoryIO(io.RawIOBase):
-    """BufferedIOBase implementation that exposes a specific memory region as a file object."""
+    """RawIOBase implementation that exposes a specific memory region as a file object."""
+
     def __init__(self, mem : Memory, start, size):
         self._mem = mem
         self._start = start
         self._size = size
-
-        self._closed = False
         self._offset = 0
 
-    """
-    def close(self):
-        self.closed = True
-
-    @property
-    def closed(self):
-        return self._closed
-
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, *exc):
-        self.close()
-    """
-    
-    """
-    def flush(self):
-        pass
-    
-    def isatty(self):
-        return False
-    """
-    """
-    def readable(self):
-        return True
-    """
     def seekable(self):
         return True
     
@@ -280,6 +253,9 @@ class MemoryIO(io.RawIOBase):
         self._mem.write(self._start + self._offset, b)
         self._offset = end_offset
 
+    def get_data(self):
+        """Return the entire data covered by the file"""
+        return self._mem.read(self._start, self._size)
 
 
 class Permissions(enum.Flag):
