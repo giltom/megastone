@@ -23,3 +23,4 @@ class AutoFormat(ExecFormat):
 
 
 FORMAT_AUTO = AutoFormat(name='auto')
+ExecFormat.register(FORMAT_AUTO)

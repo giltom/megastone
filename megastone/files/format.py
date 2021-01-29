@@ -15,10 +15,7 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
         magic: bytes = None, #Magic bytes for autodetection. If None, won't be autodetected.
     ):
         super().__init__(name, alt_names)
-
         self.magic = magic
-
-        ExecFormat.register(self)
 
     @abc.abstractmethod
     def parse_fileobj(self, fileobj, **kwargs) -> ExecFile:

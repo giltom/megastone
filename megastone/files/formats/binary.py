@@ -42,3 +42,4 @@ FORMAT_BINARY = BinaryFormat(
     name='binary',
     alt_names=['bin', 'raw', 'shellcode']
 )
+ExecFormat.register(FORMAT_BINARY)
