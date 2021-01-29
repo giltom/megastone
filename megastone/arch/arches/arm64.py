@@ -3,8 +3,8 @@ import keystone
 import capstone
 import capstone.arm64_const
 
-from .architecture import SimpleArchitecture, Endian
-from .regs import RegisterSet
+from ..architecture import SimpleArchitecture, Endian
+from ..regs import RegisterSet
 
 
 ARM64_REGS = RegisterSet.from_libs('arm64')

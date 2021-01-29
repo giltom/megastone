@@ -3,8 +3,8 @@ import keystone
 import capstone
 import capstone.x86_const
 
-from .architecture import SimpleArchitecture, Endian
-from .regs import RegisterSet
+from ..architecture import SimpleArchitecture, Endian
+from ..regs import RegisterSet
 
 
 X86_REGS = RegisterSet.from_libs('x86')

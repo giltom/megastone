@@ -3,9 +3,9 @@ import keystone
 import capstone
 import capstone.arm_const
 
-from .architecture import Architecture, Endian
-from .regs import RegisterSet
-from .isa import InstructionSet
+from ..architecture import Architecture, Endian
+from ..regs import RegisterSet
+from ..isa import InstructionSet
 
 
 CPSR_THUMB_MASK = 1 << 5

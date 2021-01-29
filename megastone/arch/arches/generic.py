@@ -1,4 +1,4 @@
-from .architecture import SimpleArchitecture, Endian
+from ..architecture import SimpleArchitecture, Endian
 
 
 class GenericArchitecture(SimpleArchitecture):

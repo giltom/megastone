@@ -1,5 +1,5 @@
-from .format import ExecFormat
-from .execfile import ExecFile
+from ..format import ExecFormat
+from ..execfile import ExecFile
 from .binary import FORMAT_BINARY
 from megastone.util import print_warning
 
