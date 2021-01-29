@@ -3,6 +3,9 @@ import importlib
 
 import unicorn
 
+from megastone.util import NamespaceMapping
+
+
 INVALID_REG_NAMES = ['invalid']
 
 class Register:
@@ -26,7 +29,7 @@ def _reg_ids_from_module(module, prefix):
             reg_ids[reg_name] = value
     return reg_ids
 
-class RegisterSet:
+class RegisterSet(NamespaceMapping):
     """The set of registers in an architecture. Note that this can include many aliases for the same register."""
 
     def __init__(self, registers):
@@ -81,8 +84,3 @@ class RegisterSet:
     
     def __getitem__(self, key):
         return self._regs[key]
-    
-    def __getattr__(self, name):
-        if name in self._regs:
-            return self._regs[name]
-        raise AttributeError()

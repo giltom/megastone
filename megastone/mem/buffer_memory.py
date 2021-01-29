@@ -37,7 +37,7 @@ class BufferMemory(MappableMemory):
 
         while curr_address < end_address:
             try:
-                seg = self.get_segment(address=curr_address)
+                seg = self.segments.by_address(curr_address)
             except KeyError as e:
                 raise ValueError(f'Access unmapped memory: 0x{curr_address:X}') from e
 

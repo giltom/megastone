@@ -1,4 +1,5 @@
 import abc
+from megastone.util import NamespaceMapping
 from pathlib import Path
 import enum
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ import io
 import shutil
 
 from megastone import Architecture
+from megastone.util import NamespaceMapping
 
 
 class Memory(abc.ABC):
@@ -162,8 +164,9 @@ class Memory(abc.ABC):
             offset = data.find(value, start=search_start)
             if offset == -1:
                 return None
-            if offset % alignment == 0:
-                return start + offset
+            address = start + offset
+            if address % alignment == 0:
+                return address
             search_start = offset + 1
 
 
@@ -406,33 +409,7 @@ class SegmentMemory(Memory):
 
     def __init__(self, arch: Architecture):
         super().__init__(arch)
-        self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
-
-    def get_segments(self, perms=Permissions.NONE):
-        """
-        Return an iterable of all segments.
-
-        if perms is given, only return segments that have all of the given permissions.
-        """
-        return (seg for seg in self._segments.values() if seg.perms.contains(perms))
-    
-    def get_segment(self, name=None, *, address=None) -> Segment:
-        """
-        Return the segment with the given name.
-        
-        If address is given instead of name, return the segment that contains the given address.
-        Raise KeyError if not found.
-        """
-        if (name is None) == (address is None):
-            raise ValueError('Exactly one of name and address must be given')
-        
-        if name is not None:
-            return self._segments[name]
-        
-        for segment in self._segments.values():
-            if segment.contains_address(address):
-                return segment
-        raise KeyError('Segment not found')
+        self.segments = SegmentMapping(self)
 
     def search_all(self, value, *, alignment=None, perms=Permissions.NONE):
         """
@@ -440,7 +417,7 @@ class SegmentMemory(Memory):
         
         If perms is given, search only segments with the given permissions.
         """
-        for seg in self.get_segments(perms):
+        for seg in self.segments.with_perms(perms):
             result = seg.search(value, alignment=alignment)
             if result is not None:
                 return result
@@ -451,18 +428,55 @@ class SegmentMemory(Memory):
         code = self.isa.assemble(assembly)
         return self.search_all(code, alignment=self.isa.insn_alignment, perms=Permissions.X)
 
-    def _add_segment(self, seg):
-        #Call in a subclass to initialize segments
-        for old_seg in self.get_segments():
-            if old_seg.overlaps(seg):
-                raise ValueError('Segment overlap')
+    @abc.abstractmethod
+    def _get_all_segments(self):
+        #Return an iterable of all segments
+        pass
 
-        self._segments[seg.name] = seg
-        return seg
+    def _get_segment_by_name(self, name):
+        #Override if more efficient implementation is available
+        for seg in self._get_all_segments():
+            if seg.name == name:
+                return seg
+        raise KeyError(f'No such segment "{name}"')
+
+    def _get_segment_by_address(self, address):
+        #Override if more efficient implementation is available
+        for seg in self._get_all_segments():
+            if seg.contains_address(address):
+                return seg
+        raise KeyError(f'No segment contains address 0x{address:X}')
+
+
+class SegmentMapping(NamespaceMapping):
+    """Helper class used to access segments."""
+
+    def __init__(self, mem: SegmentMemory):
+        self._mem = mem
+
+    def __getitem__(self, key) -> Segment:
+        return self._mem._get_segment_by_name(key)
+
+    def by_address(self, address) -> Segment:
+        """Return the segment that contains the given address."""
+        return self._mem._get_segment_by_address(address)
+
+    def __iter__(self):
+        yield from self._mem._get_all_segments()
+    
+    def with_perms(self, perms):
+        """Return an iterable of all segments that contain the given permissions."""
+        for seg in self:
+            if seg.perms.contains(perms):
+                yield seg
 
 
 class MappableMemory(SegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
+
+    def __init__(self, arch: Architecture):
+        super().__init__(arch)
+        self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
 
     @abc.abstractmethod
     def map(self, name, start, size, perms=Permissions.RWX) -> Segment:
@@ -471,11 +485,13 @@ class MappableMemory(SegmentMemory):
         
         Returns the new Segment.
         """
-        #Implementation should call _add_segment() and also any other needed maintenance....
+        #Implementation should call _add_segment() and also do any other needed maintenance....
 
     def load(self, name, address, data, perms=Permissions.RWX) -> Segment:
         """Shorthand for map() followed by write()."""
-        return self.map(name, address, len(data), perms).write(data)
+        seg = self.map(name, address, len(data), perms)
+        seg.write(data)
+        return seg
     
     def load_file(self, name, address, path, perms=Permissions.RWX) -> Segment:
         """Load the file at the given path."""
@@ -483,3 +499,21 @@ class MappableMemory(SegmentMemory):
         #If performance becomes a problem this can be improved by using seek() and write_fileobj()
         data = Path(path).read_bytes() 
         return self.load(name, address, data, perms)
+
+    def _get_all_segments(self):
+        return self._segments.values()
+
+    def _get_segment_by_name(self, name):
+        return self._segments[name]
+
+    def _add_segment(self, seg):
+        #Call in a subclass to initialize segments
+        if seg.name in self._segments:
+            raise ValueError(f'Segment with name "{seg.name}" already exists')
+
+        for old_seg in self.segments:
+            if old_seg.overlaps(seg):
+                raise ValueError('Segment overlap')
+
+        self._segments[seg.name] = seg
+        return seg
