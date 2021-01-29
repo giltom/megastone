@@ -365,6 +365,10 @@ class Segment:
         """Dump the entire segment to the given path."""
         return self.mem.dump_to_file(self.start, self.size, path)
 
+    def dump_to_fileobj(self, fileobj):
+        """Dump the entire segment to the given file object."""
+        return self.mem.dump_to_fileobj(self.start, self.size, fileobj)
+
     def create_fileobj(self):
         """Get a virtual file object exposing the segment as a file."""
         return self.mem.create_fileobj(self.start, self.size)

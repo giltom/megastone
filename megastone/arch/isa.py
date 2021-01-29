@@ -2,7 +2,7 @@ import keystone
 import capstone
 import unicorn
 
-from .db import DatabaseEntry
+from megastone.db import DatabaseEntry
 
 class InstructionSet(DatabaseEntry):
     """

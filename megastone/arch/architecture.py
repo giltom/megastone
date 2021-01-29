@@ -2,7 +2,7 @@ import enum
 import platform
 
 from .regs import Register, RegisterSet
-from .db import DatabaseEntry
+from megastone.db import DatabaseEntry
 from .isa import InstructionSet
 
 

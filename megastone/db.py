@@ -1,6 +1,3 @@
-import platform
-
-
 class DatabaseEntry:
     """
     Generic class representing an entry in an information database.

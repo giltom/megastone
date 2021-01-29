@@ -1,4 +1,5 @@
 import abc
+import sys
 
 
 def parse_hex_int(s):
@@ -7,6 +8,10 @@ def parse_hex_int(s):
 
 def hex_spaces(data):
     return ' '.join(bytes([b]).hex() for b in data)
+
+
+def print_warning(s):
+    print(f'[!] Warning: {s}', file=sys.stderr, flush=True)
 
 
 class NamespaceMapping(abc.ABC):
