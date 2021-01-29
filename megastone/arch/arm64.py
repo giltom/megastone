@@ -27,3 +27,4 @@ ARCH_ARM64 = SimpleArchitecture(
     uc_arch=unicorn.UC_ARCH_ARM64
 )
 ISA_ARM64 = ARCH_ARM64.isa
+ARCH_ARM64.add_to_db()

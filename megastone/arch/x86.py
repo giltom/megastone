@@ -57,6 +57,7 @@ ARCH_X86_16 = X86Architecture(
     uc_mode=unicorn.UC_MODE_16
 )
 ISA_X86_16 = ARCH_X86_16.isa
+ARCH_X86_16.add_to_db()
 
 ARCH_X86 = X86Architecture(
     name='x86',
@@ -70,6 +71,7 @@ ARCH_X86 = X86Architecture(
     uc_mode=unicorn.UC_MODE_32
 )
 ISA_X86 = ARCH_X86.isa
+ARCH_X86.add_to_db()
 
 ARCH_X86_64 = X86Architecture(
     name='x86-64',
@@ -83,3 +85,4 @@ ARCH_X86_64 = X86Architecture(
     uc_mode=unicorn.UC_MODE_64
 )
 ISA_X86_64 = ARCH_X86_64.isa
+ARCH_X86_64.add_to_db()

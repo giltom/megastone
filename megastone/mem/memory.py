@@ -117,7 +117,7 @@ class Memory(abc.ABC):
     
     def disassemble_one(self, address):
         """Disassemble the instruction at the given address and return it."""
-        code = self.read(address, self.arch.max_insn_size)
+        code = self.read(address, self.isa.max_insn_size)
         return self.isa.disassemble_one(code, address)
     
     def disassemble(self, address, count):

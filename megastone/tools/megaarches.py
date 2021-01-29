@@ -8,17 +8,20 @@ NUM_REGS = 40
 def yes_no(val):
     return 'yes' if val else 'no'
 
+def alt_list(alts):
+    if len(alts) > 0:
+        return '(' + ', '.join(alts) + ')'
+    return ''
+
 def main():
     print(f'Native: {Architecture.native().name}')
     print('Supported:\n')
     for arch in Architecture.all():
-        alt_names = ', '.join(arch.alt_names)
-        print(f'{arch.name} ({alt_names})')
-        print(f'    bits: {arch.bits}  endian: {arch.endian.name.lower()}  registers: {len(arch.regs)}')
+        print(f'{arch.name} {alt_list(arch.alt_names)}')
+        print(f'    bits: {arch.bits}  endian: {arch.endian.name.lower()}  registers: {yes_no(arch.regs is not None)}')
         print(f'    instruction sets:')
         for isa in arch.isas:
-            alt_names = ', '.join(isa.alt_names)
-            print(f'        {isa.name} ({alt_names}):  KS: {yes_no(isa.ks_supported)}  CS: {yes_no(isa.cs_supported)}  UC: {yes_no(isa.uc_supported)}')
+            print(f'        {isa.name} {alt_list(isa.alt_names)}:  KS: {yes_no(isa.ks_supported)}  CS: {yes_no(isa.cs_supported)}  UC: {yes_no(isa.uc_supported)}')
         print()
 
 

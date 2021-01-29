@@ -87,3 +87,4 @@ ARCH_ARM = ARMArchitecture(
     arm_isa=ISA_ARM,
     thumb_isa=ISA_THUMB
 )
+ARCH_ARM.add_to_db()

@@ -62,8 +62,6 @@ class Architecture(DatabaseEntry):
         self.retaddr_reg = retaddr_reg
         self.retval_reg = retval_reg
 
-        Architecture.register(self)
-
     @staticmethod
     def native():
         """Return the native Architecture of this machine."""
@@ -95,6 +93,12 @@ class Architecture(DatabaseEntry):
         if len(data) != self.word_size:
             raise ValueError(f'Invalid word length {len(data)}, expected {self.word_size}')
         return self.endian.decode_int(data, signed=signed)
+
+    def add_to_db(self):
+        """Register this Architecture and all of its InstructionSets in the database so they can be found by by_name()"""
+        Architecture.register(self)
+        for isa in self.isas:
+            InstructionSet.register(isa)
 
 
 class SimpleArchitecture(Architecture):

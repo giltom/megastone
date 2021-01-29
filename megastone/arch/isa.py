@@ -44,8 +44,6 @@ class InstructionSet(DatabaseEntry):
             self.cs = capstone.Cs(self.cs_arch, self.cs_mode)
             self.cs.detail = True
 
-        InstructionSet.register(self)
-
     @property
     def ks_supported(self):
         return self.ks_arch is not None
