@@ -142,16 +142,19 @@ class Debugger(abc.ABC):
     def sp(self, value):
         self.regs.gen_sp = value
 
-    def run(self, count=None) -> StopReason:
+    def run(self, count=None, *, address=None) -> StopReason:
         """
         Resume execution.
 
         `count`, if given, is the maximum number of instructions to run. If None, the number is unlimited.
+        `address` is the address to run from. If None, resume from the current PC.
         Return a `StopReason`.
         Raise `CPUError` on errors.
         """
         self._stopped = False
 
+        if address is not None:
+            self.pc = address
         self._run(count)
 
         if self._stopped:
@@ -203,6 +206,7 @@ class Debugger(abc.ABC):
         return self.mem.disassemble_one(self.pc, self.isa)
 
     def _handle_hook(self, hook: Hook, access: Access = None):
+        #Implementations should call this on every hook that is triggered
         self.curr_hook = hook
         self._last_hook = hook
         self.curr_access = access
