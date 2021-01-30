@@ -3,8 +3,8 @@ from megastone import Emulator, ARCH_ARM, HOOK_STOP
 
 base = 0x1000
 arch = ARCH_ARM
-isa = arch.arm
-emu = Emulator(arch, isa)
+isa = arch.thumb
+emu = Emulator(arch)
 
 assembly = """
     MOV R0, 1
@@ -14,17 +14,11 @@ assembly = """
 """
 code = isa.assemble(assembly, base)
 emu.mem.load('seg1', base, code)
-emu.pc = base
+emu.pc = isa.address_to_pointer(base)
 
-print(hex(emu.regs.cpsr))
-print(emu.pc)
+def trace_func(emu: Emulator):
+    print(hex(emu.pc), hex(emu.regs.r0))
 
-def func(emu: Emulator):
-    print('Hello world', hex(emu.pc))
 
-emu.add_code_hook(0x1004, func)
-
-emu.step()
-emu.step()
-emu.step()
-emu.step()
+emu.trace(trace_func)
+emu.run(4)

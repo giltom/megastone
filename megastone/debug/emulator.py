@@ -57,19 +57,18 @@ class Emulator(Debugger):
 
     mem: MappableMemory
 
-    def __init__(self, arch: Architecture, isa: InstructionSet = None):
-        if isa is None:
-            isa = arch.isa
-        self._uc = isa.create_uc()
-        super().__init__(UnicornMemory(arch, self._uc))
+    def __init__(self, arch: Architecture):
+        uc = arch.isa.create_uc()
+        super().__init__(UnicornMemory(arch, uc))
 
+        self._uc = uc
         self._stopped = False
         self._trace_hook: Hook = None
         
     @classmethod
-    def from_memory(cls, mem: SegmentMemory, isa: InstructionSet = None):
+    def from_memory(cls, mem: SegmentMemory):
         """Create an Emulator from an existing SegmentMemory."""
-        emu = cls(mem.arch, isa)
+        emu = cls(mem.arch)
         emu.mem.load_memory(mem)
         return emu
 
@@ -80,8 +79,7 @@ class Emulator(Debugger):
 
         Architecture, memory layout, starting address, and initial ISA are automatically determined.
         """
-        isa = exe.arch.isa_from_address(exe.entry)
-        emu = cls(exe.arch, isa)
+        emu = cls(exe.arch)
         emu.mem.load_memory(exe.mem)
         emu.pc = exe.entry
         return emu
