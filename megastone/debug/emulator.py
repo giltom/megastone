@@ -11,8 +11,6 @@ from megastone.util import MegastoneError, warning, round_up
 from megastone.files.execfile import ExecFile
 
 
-PAGE_SIZE = 0x1000
-
 PERM_TO_UC_PROT = {
     Permissions.R: unicorn.UC_PROT_READ,
     Permissions.W: unicorn.UC_PROT_WRITE,
@@ -34,11 +32,11 @@ class UnicornMemory(MappableMemory):
         self._uc = uc
 
     def map(self, name, start, size, perms=Permissions.RWX) -> Segment:
-        if start % PAGE_SIZE != 0:
-            raise MegastoneError(f'Emulator segment addresses must be aligned 0x{PAGE_SIZE:X}')
-        if size % PAGE_SIZE != 0:
-            warning(f'Rounding up segment size to multiple of 0x{PAGE_SIZE:X}')
-            size = round_up(size, PAGE_SIZE)
+        if start % Emulator.PAGE_SIZE != 0:
+            raise MegastoneError(f'Emulator segment addresses must be aligned 0x{Emulator.PAGE_SIZE:X}')
+        if size % Emulator.PAGE_SIZE != 0:
+            warning(f'Rounding up segment size to multiple of 0x{Emulator.PAGE_SIZE:X}')
+            size = Emulator.round_up(size)
 
         seg = Segment(name, start, size, perms, self)
         self._add_segment(seg)
@@ -56,6 +54,8 @@ class Emulator(Debugger):
     """Emulator based on the Unicorn engine. Implements the full Debugger interface."""
 
     mem: MappableMemory
+
+    PAGE_SIZE = 0x1000
 
     def __init__(self, arch: Architecture):
         uc = arch.isa.create_uc()
@@ -83,6 +83,11 @@ class Emulator(Debugger):
         emu.mem.load_memory(exe.mem)
         emu.pc = exe.entry
         return emu
+
+    @staticmethod
+    def round_up(n):
+        """Return n rounded up to the emulator page size."""
+        return round_up(n, Emulator.PAGE_SIZE)
 
     def get_reg(self, reg: Register) -> int:
         return self._uc.reg_read(reg.uc_id)
