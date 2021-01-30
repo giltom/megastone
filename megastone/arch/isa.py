@@ -86,3 +86,11 @@ class InstructionSet(DatabaseEntry):
     def create_uc(self):
         """Create and return a Unicorn Uc object for this architecture"""
         return unicorn.Uc(self.uc_arch, self.uc_mode)
+
+    def address_to_pointer(self, address):
+        """Convert a code address to a pointer (relevant for thumb)."""
+        return address
+
+    def pointer_to_address(self, pointer):
+        """Convert a pointer to a code address (relevant for thumb)."""
+        return pointer

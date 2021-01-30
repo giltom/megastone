@@ -6,8 +6,10 @@ import capstone.arm_const
 from ..architecture import Architecture, Endian
 from ..regs import RegisterSet
 from ..isa import InstructionSet
+from megastone.util import MegastoneError
 
 
+PC_THUMB_MASK = 1
 CPSR_THUMB_MASK = 1 << 5
 
 
@@ -33,6 +35,15 @@ class ARMInstructionSet(InstructionSet):
             uc_arch=unicorn.UC_ARCH_ARM,
             uc_mode=uc_mode
         )
+
+
+class ThumbInstructionSet(ARMInstructionSet):
+    def address_to_pointer(self, address):
+        return address | PC_THUMB_MASK
+
+    def pointer_to_address(self, pointer):
+        return pointer & ~PC_THUMB_MASK
+
 
 class ARMArchitecture(Architecture):
     """Base class for 32-bit ARM architectures."""
@@ -60,6 +71,21 @@ class ARMArchitecture(Architecture):
         self.arm = arm_isa
         self.thumb = thumb_isa
 
+    def isa_from_address(self, address) -> InstructionSet:
+        return self._get_isa(address & 1)
+
+    def isa_from_regs(self, regs) -> InstructionSet:
+        return self._get_isa(regs.cpsr & CPSR_THUMB_MASK)
+
+    def _get_isa(self, thumb):
+        if thumb:
+            isa = self.thumb
+        else:
+            isa = self.arm
+        if isa is None:
+            raise MegastoneError('Architecture doesn\'t support the current instruction set')
+        return isa
+
 
 ARM_REGS = RegisterSet.from_libs('arm')
 
@@ -72,7 +98,7 @@ ISA_ARM = ARMInstructionSet(
     uc_mode=unicorn.UC_MODE_ARM | unicorn.UC_MODE_LITTLE_ENDIAN
 )
 
-ISA_THUMB = ARMInstructionSet(
+ISA_THUMB = ThumbInstructionSet(
     name='thumb',
     min_insn_size=2,
     ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,

@@ -14,6 +14,12 @@ def print_warning(s):
     print(f'[!] Warning: {s}', file=sys.stderr, flush=True)
 
 
+def round_up(value, size):
+    if value % size == 0:
+        return value
+    return (value // size + 1) * size
+
+
 class NamespaceMapping(abc.ABC):
     """Basic mapping type that supports access by both index and attribute."""
 
@@ -27,9 +33,7 @@ class NamespaceMapping(abc.ABC):
         except KeyError as e:
             raise AttributeError() from e
 
-    def __contains__(self, key):
-        try:
-            self[key]
-        except KeyError:
-            return False
-        return True
+
+class MegastoneError(Exception):
+    """Base class for all custom exceptions."""
+    pass

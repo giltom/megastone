@@ -1,4 +1,5 @@
 import abc
+from megastone.arch.isa import InstructionSet
 from megastone.util import NamespaceMapping
 from pathlib import Path
 import enum
@@ -108,22 +109,26 @@ class Memory(abc.ABC):
         """Write a C-string to the given address."""
         self.write(address, string.encode('UTF-8') + b'\0')
     
-    def write_code(self, address, assembly):
+    def write_code(self, address, assembly, isa=None):
         """Assemble the given instructions and write them to the address."""
-        code = self.isa.assemble(assembly, address)
+        isa = self._fix_isa(isa)
+
+        code = isa.assemble(assembly, address)
         if self.verbose:
             print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
     
-    def disassemble_one(self, address):
+    def disassemble_one(self, address, isa=None):
         """Disassemble the instruction at the given address and return it."""
-        code = self.read(address, self.isa.max_insn_size)
-        return self.isa.disassemble_one(code, address)
+        isa = self._fix_isa(isa)
+
+        code = self.read(address, isa.max_insn_size)
+        return isa.disassemble_one(code, address)
     
-    def disassemble(self, address, count):
+    def disassemble(self, address, count, isa=None):
         """Disassemble `count` instructions at the given address and return an iterator over the disassembled instructions."""
         for _ in range(count):
-            inst = self.disassemble_one(address)
+            inst = self.disassemble_one(address, isa)
             yield inst
             address += inst.size
 
@@ -198,6 +203,11 @@ class Memory(abc.ABC):
             raise ValueError('Slice stepping is not supported for Memory objects')
         if key.start is None or key.stop is None:
             raise ValueError('Slice start and end must be specified for memory objects')
+
+    def _fix_isa(self, isa) -> InstructionSet:
+        if isa is None:
+            return self.isa
+        return isa
 
 
 class MemoryIO(io.RawIOBase):
@@ -403,10 +413,12 @@ class SegmentMemory(Memory):
                 return result
         return None
 
-    def search_code(self, assembly):
+    def search_code(self, assembly, isa=None):
         """Search for the given assembly instructions in all executable segments."""
-        code = self.isa.assemble(assembly)
-        return self.search_all(code, alignment=self.isa.insn_alignment, perms=Permissions.X)
+        isa = self._fix_isa(isa)
+
+        code = isa.assemble(assembly)
+        return self.search_all(code, alignment=isa.insn_alignment, perms=Permissions.X)
 
     @abc.abstractmethod
     def _get_all_segments(self):
@@ -479,6 +491,11 @@ class MappableMemory(SegmentMemory):
         #If performance becomes a problem this can be improved by using seek() and write_fileobj()
         data = Path(path).read_bytes() 
         return self.load(name, address, data, perms)
+
+    def load_memory(self, mem: SegmentMemory):
+        """Copy all segments from the given SegmentMemory into this memory."""
+        for seg in mem.segments:
+            self.load(seg.name, seg.start, seg.read(), seg.perms)
 
     def _get_all_segments(self):
         return self._segments.values()

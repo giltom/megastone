@@ -82,5 +82,8 @@ class RegisterSet(NamespaceMapping):
     def __len__(self):
         return len(self._regs)
     
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Register:
         return self._regs[key]
+
+    def has_reg_name(self, name):
+        return name in self._regs

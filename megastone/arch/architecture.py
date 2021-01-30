@@ -100,6 +100,18 @@ class Architecture(DatabaseEntry):
         for isa in self.isas:
             InstructionSet.register(isa)
 
+    def isa_from_address(self, address) -> InstructionSet:
+        """Try to determine the current ISA from an address."""
+        return self.isa
+
+    def isa_from_regs(self, regs) -> InstructionSet:
+        """
+        Try to determine the current ISA from register values.
+
+        regs should be a namespace that maps register names to values.
+        """
+        return self.isa
+
 
 class SimpleArchitecture(Architecture):
     """An Architecture with only one ISA."""

@@ -16,6 +16,7 @@ class ExecFile:
         entry - Entry address
         """
         self.mem = mem
+        self.arch = self.mem.arch
         self.entry = entry
 
     def build_fileobj(self, fileobj):
