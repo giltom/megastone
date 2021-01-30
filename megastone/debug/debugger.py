@@ -19,6 +19,14 @@ class Access:
     type: AccessType
     address: int
     size: int
+    value: int = None #value for writes
+
+    def __repr__(self):
+        result = f'{self.__class__.__name__}(type=AccessType.{self.type.name}, address=0x{self.address:X}, size={self.size}'
+        if self.value is not None:
+            result += f', value=0x{self.value:X}'
+        result += ')'
+        return result
 
 
 class HookFunc(abc.ABC):
@@ -67,24 +75,34 @@ class DataHook(Hook):
 
 
 class CPUError(MegastoneError):
-    pass
+    def __init__(self, message, address):
+        super().__init__(message)
+        self.address = address
 
 
 class InvalidInsnError(CPUError):
-    pass
+    def __init__(self, address):
+        super().__init__(f'Invalid instruction at 0x{address:X}', address)
 
 
 class FaultCause(enum.Enum):
     UNMAPPED = enum.auto()
-    PROTECTION = enum.auto()
-    UNALIGNED = enum.auto()
+    PROTECTED = enum.auto()
 
 
 class MemFaultError(CPUError):
-    def __init__(self, message, cause: FaultCause, access: Access):
-        super().__init__(message)
+    def __init__(self, address, cause: FaultCause, access: Access):
+        message = f'Memory fault at PC=0x{address:X}: {access.type.name} {cause.name}'
+        if access.type is not AccessType.EXECUTE:
+            message += f', address=0x{access.address:X}, size={access.size}'
+            if access.type is AccessType.WRITE:
+                message += f', value=0x{access.value}'
+        super().__init__(message, address)
         self.cause = cause
         self.access = access
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(0x{self.address:X}, FaultCause.{self.cause.name}, {self.access})'
 
 
 class StopType(enum.Enum):

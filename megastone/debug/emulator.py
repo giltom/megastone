@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
 import unicorn
+from unicorn.unicorn_const import UC_ERR_READ_UNMAPPED
 
-from .debugger import Access, Debugger, Hook, CodeHook, DataHook, StopReason, StopType, HookFunc
+from .debugger import Access, AccessType, CPUError, Debugger, Hook, CodeHook, DataHook, HookFunc, InvalidInsnError, MemFaultError, FaultCause
 from megastone.mem.memory import MappableMemory, Permissions, Segment, SegmentMemory
 from megastone.arch.architecture import Architecture
-from megastone.arch.isa import InstructionSet
 from megastone.arch.regs import Register
 from megastone.util import MegastoneError, warning, round_up
 from megastone.files.execfile import ExecFile
@@ -15,6 +15,30 @@ PERM_TO_UC_PROT = {
     Permissions.R: unicorn.UC_PROT_READ,
     Permissions.W: unicorn.UC_PROT_WRITE,
     Permissions.X: unicorn.UC_PROT_EXEC
+}
+
+UC_ACCESS_TO_ACCESS_TYPE = {
+    unicorn.UC_MEM_READ : AccessType.READ,
+    unicorn.UC_MEM_READ_UNMAPPED : AccessType.READ,
+    unicorn.UC_MEM_WRITE_PROT : AccessType.READ,
+
+    unicorn.UC_MEM_WRITE : AccessType.WRITE,
+    unicorn.UC_MEM_WRITE_UNMAPPED : AccessType.WRITE,
+    unicorn.UC_MEM_WRITE_PROT : AccessType.WRITE,
+
+    unicorn.UC_MEM_FETCH : AccessType.EXECUTE,
+    unicorn.UC_MEM_FETCH_UNMAPPED : AccessType.EXECUTE,
+    unicorn.UC_MEM_FETCH_PROT : AccessType.EXECUTE
+}
+
+UC_ACCESS_TO_FAULT_CAUSE = {
+    unicorn.UC_MEM_READ_UNMAPPED : FaultCause.UNMAPPED,
+    unicorn.UC_MEM_WRITE_UNMAPPED : FaultCause.UNMAPPED,
+    unicorn.UC_MEM_FETCH_UNMAPPED : FaultCause.UNMAPPED,
+
+    unicorn.UC_MEM_READ_PROT : FaultCause.PROTECTED,
+    unicorn.UC_MEM_WRITE_PROT : FaultCause.PROTECTED,
+    unicorn.UC_MEM_FETCH_PROT : FaultCause.PROTECTED
 }
 
 
@@ -64,6 +88,10 @@ class Emulator(Debugger):
         self._uc = uc
         self._stopped = False
         self._trace_hook: Hook = None
+        self._fault_cause: FaultCause = None
+        self._fault_access: Access = None
+
+        self._uc.hook_add(unicorn.UC_HOOK_MEM_INVALID, self._mem_invalid_hook)
         
     @classmethod
     def from_memory(cls, mem: SegmentMemory):
@@ -99,8 +127,14 @@ class Emulator(Debugger):
         start = self.isa.address_to_pointer(self.pc)
         if count is None:
             count = 0
-        #for now i'm hoping that setting until=-1 means that it won't stop 
-        self._uc.emu_start(start, -1, count=count)
+
+        self._fault_cause = None
+        self._fault_access = None
+        
+        try:
+            self._uc.emu_start(start, -1, count=count) #for now i'm hoping that setting until=-1 means that it won't stop 
+        except unicorn.UcError as e:
+            self._handle_uc_error(e)
         #TODO: handle errors properly
 
     def _add_hook(self, hook: Hook):
@@ -134,3 +168,22 @@ class Emulator(Debugger):
 
     def _handle_code_hook(self, uc, address, size, hook: CodeHook):
         self._handle_hook(hook)
+
+    def _handle_uc_error(self, e: unicorn.UcError):
+        if self._fault_cause is not None:
+            raise MemFaultError(self.pc, self._fault_cause, self._fault_access) from None
+        if e.errno == unicorn.UC_ERR_INSN_INVALID:
+            raise InvalidInsnError(self.pc) from None
+        raise CPUError(str(e), self.pc) from None
+
+    def _mem_invalid_hook(self, uc, uc_access, address, size, value, user_data):
+        cause = UC_ACCESS_TO_FAULT_CAUSE.get(uc_access, None)
+        access_type = UC_ACCESS_TO_ACCESS_TYPE.get(uc_access, None)
+
+        if cause is not None and access_type is not None:
+            if access_type is not AccessType.WRITE:
+                value = None
+            self._fault_cause = cause
+            self._fault_access = Access(access_type, address, size, value)
+
+        return False
