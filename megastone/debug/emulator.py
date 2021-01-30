@@ -7,7 +7,7 @@ from megastone.mem.memory import MappableMemory, Permissions, Segment, SegmentMe
 from megastone.arch.architecture import Architecture
 from megastone.arch.isa import InstructionSet
 from megastone.arch.regs import Register
-from megastone.util import MegastoneError, print_warning, round_up
+from megastone.util import MegastoneError, warning, round_up
 from megastone.files.execfile import ExecFile
 
 
@@ -37,7 +37,7 @@ class UnicornMemory(MappableMemory):
         if start % PAGE_SIZE != 0:
             raise MegastoneError(f'Emulator segment addresses must be aligned 0x{PAGE_SIZE:X}')
         if size % PAGE_SIZE != 0:
-            print_warning(f'Rounding up segment size to multiple of 0x{PAGE_SIZE:X}')
+            warning(f'Rounding up segment size to multiple of 0x{PAGE_SIZE:X}')
             size = round_up(size, PAGE_SIZE)
 
         seg = Segment(name, start, size, perms, self)

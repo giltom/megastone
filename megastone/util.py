@@ -1,5 +1,6 @@
 import abc
 import sys
+import warnings
 
 
 def parse_hex_int(s):
@@ -10,8 +11,8 @@ def hex_spaces(data):
     return ' '.join(bytes([b]).hex() for b in data)
 
 
-def print_warning(s):
-    print(f'[!] Warning: {s}', file=sys.stderr, flush=True)
+def warning(s):
+    warnings.warn(s, MegastoneWarning, stacklevel=2)
 
 
 def round_up(value, size):
@@ -37,3 +38,11 @@ class NamespaceMapping(abc.ABC):
 class MegastoneError(Exception):
     """Base class for all custom exceptions."""
     pass
+
+class MegastoneWarning(Warning):
+    """Base class for all custom warnings."""
+    pass
+
+def disable_warnings():
+    """Disable all megastone warnings."""
+    warnings.simplefilter('ignore', MegastoneWarning)

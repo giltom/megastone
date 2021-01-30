@@ -1,7 +1,7 @@
 from ..format import ExecFormat
 from ..execfile import ExecFile
 from .binary import FORMAT_BINARY
-from megastone.util import print_warning
+from megastone.util import warning
 
 
 MAX_MAGIC_SIZE = 0x10
@@ -15,7 +15,7 @@ class AutoFormat(ExecFormat):
         magic = fileobj.read(MAX_MAGIC_SIZE)
         fmt = ExecFormat.by_magic(magic)
         if fmt is None:
-            print_warning('Assuming raw binary file')
+            warning('Assuming raw binary file')
             fmt = FORMAT_BINARY
 
         fileobj.seek(0)
