@@ -26,8 +26,8 @@ class InstructionSet(DatabaseEntry):
     ):
         super().__init__(name, alt_names)
         self.insn_alignment = insn_alignment
-        self.min_insn_size = min_insn_size,
-        self.max_insn_size = max_insn_size,
+        self.min_insn_size = min_insn_size
+        self.max_insn_size = max_insn_size
         self.ks_arch = ks_arch
         self.ks_mode = ks_mode
         self.cs_arch = cs_arch
