@@ -14,11 +14,10 @@ assembly = """
 """
 code = isa.assemble(assembly, base)
 emu.mem.load('seg1', base, code)
-emu.pc = isa.address_to_pointer(base)
 
 def trace_func(emu: Emulator):
-    print(hex(emu.pc), hex(emu.regs.r0))
+    print(emu.curr_insn, hex(emu.regs.r0))
 
 
 emu.trace(trace_func)
-emu.run(4)
+emu.run(count=4, address=base)
