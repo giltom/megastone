@@ -160,19 +160,23 @@ class Debugger(abc.ABC):
     def sp(self, value):
         self.regs.gen_sp = value
 
-    def run(self, count=None, *, address=None) -> StopReason:
+    def run(self, count=None, *, address=None, isa: InstructionSet=None) -> StopReason:
         """
         Resume execution.
 
         `count`, if given, is the maximum number of instructions to run. If None, the number is unlimited.
         `address` is the address to run from. If None, resume from the current PC.
+        `isa` is the ISA to start in. If None, determine from address. This only has meaning if address is given.
         Return a `StopReason`.
         Raise `CPUError` on errors.
         """
         self._stopped = False
 
         if address is not None:
+            if isa is not None:
+                address = isa.address_to_pointer(address)
             self.pc = address
+
         self._run(count)
 
         if self._stopped:

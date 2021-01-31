@@ -135,7 +135,6 @@ class Emulator(Debugger):
             self._uc.emu_start(start, -1, count=count) #for now i'm hoping that setting until=-1 means that it won't stop 
         except unicorn.UcError as e:
             self._handle_uc_error(e)
-        #TODO: handle errors properly
 
     def _add_hook(self, hook: Hook):
         if isinstance(hook, CodeHook):

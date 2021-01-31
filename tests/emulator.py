@@ -1,10 +1,9 @@
-from megastone import Emulator, ARCH_ARM, HOOK_STOP
+from megastone import Emulator, ARCH_ARM, ISA_THUMB, HOOK_STOP
 
 
-base = 0x1000
-arch = ARCH_ARM
-isa = arch.thumb
-emu = Emulator(arch)
+emu = Emulator(ARCH_ARM)
+emu.mem.map('seg1', 0x1000, 0x1000)
+base_address = emu.mem.segments.seg1.address
 
 assembly = """
     MOV R0, 1
@@ -12,13 +11,9 @@ assembly = """
     ADD R0, R0
     ADD R0, R0
 """
-code = isa.assemble(assembly, base)
-emu.mem.load('seg1', base, code)
-emu.pc = isa.address_to_pointer(base)
+code = ISA_THUMB.assemble(assembly, base_address)
+emu.mem.write(base_address, code)
+emu.add_code_hook(base_address + len(code), HOOK_STOP)
 
-def trace_func(emu: Emulator):
-    print(hex(emu.pc), hex(emu.regs.r0))
-
-
-emu.trace(trace_func)
-emu.run(4)
+emu.trace(lambda e: print(e.curr_insn, e.regs.r0))
+emu.run(address=base_address, isa=ISA_THUMB)
