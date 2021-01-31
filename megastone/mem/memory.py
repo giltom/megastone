@@ -331,6 +331,11 @@ class Segment:
     @property
     def end(self):
         return self.start + self.size
+
+    @property
+    def address(self):
+        """Alias of `start`."""
+        return self.start
     
     def __repr__(self):
         return f"<Segment '{self.name}' at 0x{self.start:X}-0x{self.end:X}, {self.perms}>"
@@ -425,6 +430,10 @@ class SegmentMemory(Memory):
         #Return an iterable of all segments
         pass
 
+    @abc.abstractmethod
+    def _num_segments(self):
+        pass
+
     def _get_segment_by_name(self, name):
         #Override if more efficient implementation is available
         for seg in self._get_all_segments():
@@ -462,6 +471,9 @@ class SegmentMapping(NamespaceMapping):
             if seg.perms.contains(perms):
                 yield seg
 
+    def __len__(self):
+        return self._mem._num_segments()
+
 
 class MappableMemory(SegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
@@ -497,8 +509,19 @@ class MappableMemory(SegmentMemory):
         for seg in mem.segments:
             self.load(seg.name, seg.start, seg.read(), seg.perms)
 
+    def allocate(self, name, size, perms=Permissions.RWX) -> Segment:
+        """Automatically allocate a new segment in an unused region."""
+        if len(self.segments) == 0:
+            address = 0x0
+        else:
+            address = max(seg.end for seg in self.segments)
+        return self.map(name, address, size, perms)
+        
     def _get_all_segments(self):
         return self._segments.values()
+
+    def _num_segments(self):
+        return len(self._segments)
 
     def _get_segment_by_name(self, name):
         return self._segments[name]
