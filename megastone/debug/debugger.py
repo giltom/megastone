@@ -140,6 +140,9 @@ class Debugger(abc.ABC):
     @property
     def isa(self):
         """The current instruction set."""
+        #The default implementation assumes that a change to the ISA (i.e. by writing to PC)
+        #is immediately visible in the other registers (e.g. the CPSR)
+        #This is true for Unicorn but this property may need to be overriden in other implementations.
         return self.arch.isa_from_regs(self.regs)
 
     @property
@@ -160,23 +163,32 @@ class Debugger(abc.ABC):
     def sp(self, value):
         self.regs.gen_sp = value
 
+    def jump(self, address, isa: InstructionSet=None):
+        """
+        Set the program counter to the given address.
+
+        In ARM/THUMB, the instruction set will be determined from the address,
+        unless `isa` is given, in which case that ISA will be forced.
+        """
+        #The default implementation assumes that writing a 1 to the LSB of PC changes to thumb mode
+        #This is true for Unicorn but this function may need to be overriden in other implementations
+        if isa is not None:
+            address = isa.address_to_pointer(self.arch.pointer_to_address(address))
+        self.pc = address
+
     def run(self, count=None, *, address=None, isa: InstructionSet=None) -> StopReason:
         """
         Resume execution.
 
         `count`, if given, is the maximum number of instructions to run. If None, the number is unlimited.
-        `address` is the address to run from. If None, resume from the current PC.
-        `isa` is the ISA to start in. If None, determine from address. This only has meaning if address is given.
-        Return a `StopReason`.
+        If `address` is given, a jump to that address will be performed before execution starts.
+        The meaning of `address` and `isa` is the same as in `jump()`.
         Raise `CPUError` on errors.
         """
         self._stopped = False
 
         if address is not None:
-            if isa is not None:
-                address = isa.address_to_pointer(address)
-            self.pc = address
-
+            self.jump(address, isa)
         self._run(count)
 
         if self._stopped:
@@ -226,6 +238,33 @@ class Debugger(abc.ABC):
     def curr_insn(self):
         """Return the current instruction about to be executed."""
         return self.mem.disassemble_one(self.pc, self.isa)
+
+    def stack_push(self, value):
+        """Push the given value to the stack."""
+        self.sp -= self.arch.word_size
+        self.mem.write_word(self.sp, value)
+    
+    def stack_pop(self):
+        """Pop and return value from the stack."""
+        value = self.mem.read_word(self.sp)
+        self.sp += self.arch.word_size
+        return value
+
+    def return_from_function(self, retval=None):
+        """
+        Return from the current function.
+
+        If `retval` is given, return that value.
+        This works only work at the very start of the function (before SP/LR has been modified).
+        """
+        if retval is not None:
+            self.regs.retval = retval
+
+        if self.arch.retaddr_reg is not None:
+            self.pc = self.regs.retaddr
+        else:
+            self.pc = self.mem.read_word(self.sp)
+            self.sp += self.arch.word_size
 
     def _handle_hook(self, hook: Hook, access: Access = None):
         #Implementations should call this on every hook that is triggered

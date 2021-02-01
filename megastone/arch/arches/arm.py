@@ -41,9 +41,6 @@ class ThumbInstructionSet(ARMInstructionSet):
     def address_to_pointer(self, address):
         return address | PC_THUMB_MASK
 
-    def pointer_to_address(self, pointer):
-        return pointer & ~PC_THUMB_MASK
-
 
 class ARMArchitecture(Architecture):
     """Base class for 32-bit ARM architectures."""
@@ -71,8 +68,11 @@ class ARMArchitecture(Architecture):
         self.arm = arm_isa
         self.thumb = thumb_isa
 
-    def isa_from_address(self, address) -> InstructionSet:
-        return self._get_isa(address & 1)
+    def pointer_to_address(self, pointer):
+        return pointer & ~PC_THUMB_MASK
+
+    def isa_from_pointer(self, pointer) -> InstructionSet:
+        return self._get_isa(pointer & 1)
 
     def isa_from_regs(self, regs) -> InstructionSet:
         return self._get_isa(regs.cpsr & CPSR_THUMB_MASK)

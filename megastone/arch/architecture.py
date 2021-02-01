@@ -100,7 +100,11 @@ class Architecture(DatabaseEntry):
         for isa in self.isas:
             InstructionSet.register(isa)
 
-    def isa_from_address(self, address) -> InstructionSet:
+    def pointer_to_address(self, pointer):
+        """Convert a pointer to a code address (relevant for thumb)."""
+        return pointer
+
+    def isa_from_pointer(self, address) -> InstructionSet:
         """Try to determine the current ISA from an address."""
         return self.isa
 

@@ -90,7 +90,3 @@ class InstructionSet(DatabaseEntry):
     def address_to_pointer(self, address):
         """Convert a code address to a pointer (relevant for thumb)."""
         return address
-
-    def pointer_to_address(self, pointer):
-        """Convert a pointer to a code address (relevant for thumb)."""
-        return pointer
