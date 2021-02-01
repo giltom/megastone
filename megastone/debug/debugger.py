@@ -54,6 +54,16 @@ class StopHookFunc(HookFunc):
 HOOK_STOP = StopHookFunc()
 
 
+class BreakHookFunc(HookFunc):
+    """Breakpoint-like hook: stops execution unless starting execution from its address."""
+
+    def __call__(self, dbg):
+        if dbg.start_pc != dbg.pc:
+            dbg.stop()
+
+HOOK_BREAK = BreakHookFunc()
+
+
 class ReplaceFunctionHookFunc(HookFunc):
     def __init__(self, func: HookFunc):
         self.func = func
@@ -236,6 +246,10 @@ class Debugger(abc.ABC):
     def trace(self, func: HookFunc):
         """Hook all instructions."""
         return self.add_code_hook(func, ALL_ADDRESSES)
+
+    def add_breakpoint(self, address):
+        """Add a HOOK_BREAK at the given address."""
+        return self.add_code_hook(HOOK_BREAK, address)
 
     @abc.abstractmethod
     def _add_hook(self, hook: Hook):
