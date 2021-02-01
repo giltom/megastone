@@ -51,7 +51,23 @@ class StopHookFunc(HookFunc):
     def __call__(self, dbg):
         dbg.stop()
 
+    def __repr__(self):
+        return 'HOOK_STOP'
+
 HOOK_STOP = StopHookFunc()
+
+
+class StopOnceHookFunc(HookFunc):
+    """A hook that will stop execution once, then remove itself."""
+    
+    def __call__(self, dbg):
+        dbg.remove_hook(dbg.curr_hook)
+        dbg.stop()
+
+    def __repr__(self):
+        return 'HOOK_STOP_ONCE'
+
+HOOK_STOP_ONCE = StopOnceHookFunc()
 
 
 class BreakHookFunc(HookFunc):
@@ -60,6 +76,9 @@ class BreakHookFunc(HookFunc):
     def __call__(self, dbg):
         if dbg.start_pc != dbg.pc:
             dbg.stop()
+
+    def __repr__(self):
+        return 'HOOK_BREAK'
 
 HOOK_BREAK = BreakHookFunc()
 
@@ -70,6 +89,9 @@ class ReplaceFunctionHookFunc(HookFunc):
     
     def __call__(self, dbg):
         dbg.return_from_function(self.func(dbg))
+
+    def __repr__(self):
+        return f'ReplaceFunctionHookFunc({self.func})'
 
 
 @dataclass(eq=False)
@@ -140,8 +162,7 @@ class Debugger(abc.ABC):
         self.curr_access: Access = None
         self.start_pc = None
 
-        self._last_hook: Hook = None
-        self._stopped = False
+        self._stop_hook: Hook = None #Hook that stopped execution
 
     @abc.abstractmethod
     def get_reg(self, reg: Register) -> int:
@@ -199,15 +220,15 @@ class Debugger(abc.ABC):
         The meaning of `address` and `isa` is the same as in `jump()`.
         Raise `CPUError` on errors.
         """
-        self._stopped = False
+        self._stop_hook = None
 
         if address is not None:
             self.jump(address, isa)
         self.start_pc = self.pc
         self._run(count)
 
-        if self._stopped:
-            return StopReason(StopType.HOOK, self._last_hook)
+        if self._stop_hook:
+            return StopReason(StopType.HOOK, self._stop_hook)
         else:
             return StopReason(StopType.COUNT)
 
@@ -259,7 +280,6 @@ class Debugger(abc.ABC):
 
     def _handle_hook(self, hook: Hook, access: Access = None):
         #Implementations should call this on every hook that is triggered
-        self._last_hook = hook
         self.curr_hook = hook
         self.curr_access = access
         try:
@@ -275,7 +295,9 @@ class Debugger(abc.ABC):
     
     def stop(self):
         """Call from within a hook function to stop execution."""
-        self._stopped = True
+        #You can override this if extra bookkeeping is needed,
+        #but make sure to call super().stop()
+        self._stop_hook = self.curr_hook
 
     def disassemble(self, count):
         """Disassemble count instructions at the PC and return them."""
