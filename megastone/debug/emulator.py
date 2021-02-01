@@ -119,6 +119,12 @@ class Emulator(Debugger):
         """Return n rounded up to the emulator page size."""
         return round_up(n, Emulator.PAGE_SIZE)
 
+    def allocate_stack(self, size, *, name='stack', perms=Permissions.RWX):
+        """Allocate a stack segment and set the SP to point to its top."""
+        segment = self.mem.allocate(name, size, perms)
+        self.sp = segment.end - self.arch.word_size
+        return segment
+
     def get_reg(self, reg: Register) -> int:
         return self._uc.reg_read(reg.uc_id)
 

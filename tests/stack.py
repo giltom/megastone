@@ -2,10 +2,9 @@ from megastone import Emulator, ARCH_X86, HOOK_STOP
 import monkeyhex
 
 emu = Emulator(ARCH_X86)
+emu.allocate_stack(0x1000)
 start_seg = emu.mem.allocate('code', 0x1000)
 func_seg = emu.mem.allocate('func', 0x1000)
-stack_seg = emu.mem.allocate('stack', 0x1000)
-emu.sp = stack_seg.end - 4
 
 emu.mem.write_code(start_seg.address, f"""
     push 1
