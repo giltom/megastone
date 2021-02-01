@@ -18,7 +18,7 @@ def test_code(code):
     data = ARCH.assemble(code, BASE)
     emu.mem.load('seg', BASE, data)
     emu.mem.map('rodata', RO_ADDR, ms.Emulator.PAGE_SIZE, ms.Permissions.R)
-    emu.add_code_hook(BASE + len(data), ms.HOOK_STOP)
+    emu.add_code_hook(ms.HOOK_STOP, BASE + len(data))
     emu.trace(trace_func)
 
     emu.run(address=BASE)

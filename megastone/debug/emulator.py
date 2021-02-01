@@ -1,9 +1,6 @@
-from dataclasses import dataclass
-
 import unicorn
-from unicorn.unicorn_const import UC_ERR_READ_UNMAPPED
 
-from .debugger import Access, AccessType, CPUError, Debugger, Hook, CodeHook, DataHook, HookFunc, InvalidInsnError, MemFaultError, FaultCause
+from .debugger import Access, AccessType, CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
 from megastone.mem.memory import MappableMemory, Permissions, Segment, SegmentMemory
 from megastone.arch.architecture import Architecture
 from megastone.arch.regs import Register
@@ -15,6 +12,12 @@ PERM_TO_UC_PROT = {
     Permissions.R: unicorn.UC_PROT_READ,
     Permissions.W: unicorn.UC_PROT_WRITE,
     Permissions.X: unicorn.UC_PROT_EXEC
+}
+
+ACCESS_TYPE_TO_UC_TYPE = {
+    AccessType.READ: unicorn.UC_HOOK_MEM_READ,
+    AccessType.WRITE: unicorn.UC_HOOK_MEM_WRITE,
+    AccessType.EXECUTE : unicorn.UC_HOOK_CODE
 }
 
 UC_ACCESS_TO_ACCESS_TYPE = {
@@ -87,7 +90,6 @@ class Emulator(Debugger):
 
         self._uc = uc
         self._stopped = False
-        self._trace_hook: Hook = None
         self._fault_cause: FaultCause = None
         self._fault_access: Access = None
 
@@ -136,14 +138,27 @@ class Emulator(Debugger):
         except unicorn.UcError as e:
             self._handle_uc_error(e)
 
+    def _handle_uc_error(self, e: unicorn.UcError):
+        if self._fault_cause is not None:
+            raise MemFaultError(self.pc, self._fault_cause, self._fault_access) from None
+        if e.errno == unicorn.UC_ERR_INSN_INVALID:
+            raise InvalidInsnError(self.pc) from None
+        raise CPUError(str(e), self.pc) from None
+
     def _add_hook(self, hook: Hook):
-        if isinstance(hook, CodeHook):
-            uc_hook = self._create_code_hook(hook, hook.address, hook.address)
-        elif isinstance(hook, DataHook):
-            uc_hook = None
+        uc_type = ACCESS_TYPE_TO_UC_TYPE[hook.type]
+
+        if hook.type is AccessType.EXECUTE:
+            callback = self._code_hook
         else:
-            assert False
-        hook._data = uc_hook #Store the UC handle in the data field so we can remove the hook later
+            callback = self._data_hook
+
+        if hook.address is ALL_ADDRESSES:
+            begin, end = 1, 0
+        else:
+            begin, end = hook.address, hook.address + hook.size - 1
+
+        hook._data = self._uc.hook_add(uc_type, callback, user_data=hook, begin=begin, end=end)
 
     def remove_hook(self, hook: Hook):
         self._uc.hook_del(hook._data)
@@ -152,28 +167,18 @@ class Emulator(Debugger):
         super().stop()
         self._uc.emu_stop()
 
-    def trace(self, func: HookFunc):
-        """Arange for the given function to be called before every instruction."""
-        self._trace_hook = Hook(func)
-        self._trace_hook._data = self._create_code_hook(self._trace_hook, 1, 0)
-        
-    def stop_trace(self):
-        """Stop tracing."""
-        self.remove_hook(self._trace_hook)
-        self._trace_hook = None
-
     def _create_code_hook(self, hook: Hook, begin, end):
-        return self._uc.hook_add(unicorn.UC_HOOK_CODE, self._handle_code_hook, user_data=hook, begin=begin, end=end)
+        return self._uc.hook_add(unicorn.UC_HOOK_CODE, self._code_hook, user_data=hook, begin=begin, end=end)
 
-    def _handle_code_hook(self, uc, address, size, hook: CodeHook):
+    def _code_hook(self, uc, address, size, hook: Hook):
         self._handle_hook(hook)
 
-    def _handle_uc_error(self, e: unicorn.UcError):
-        if self._fault_cause is not None:
-            raise MemFaultError(self.pc, self._fault_cause, self._fault_access) from None
-        if e.errno == unicorn.UC_ERR_INSN_INVALID:
-            raise InvalidInsnError(self.pc) from None
-        raise CPUError(str(e), self.pc) from None
+    def _data_hook(self, uc, uc_access, address, size, value, hook: Hook):
+        access_type = UC_ACCESS_TO_ACCESS_TYPE[uc_access]
+        if access_type is not AccessType.WRITE:
+            value = None
+        access = Access(access_type, address, size, value)
+        self._handle_hook(hook, access)
 
     def _mem_invalid_hook(self, uc, uc_access, address, size, value, user_data):
         cause = UC_ACCESS_TO_FAULT_CAUSE.get(uc_access, None)

@@ -1,12 +1,14 @@
 import abc
 from dataclasses import dataclass, field
 import enum
-from megastone.files.formats.auto import MAX_MAGIC_SIZE
 from megastone.arch.isa import InstructionSet
 
 from megastone.mem import Memory
 from megastone.arch import Register
-from megastone.util import NamespaceMapping, MegastoneError
+from megastone.util import NamespaceMapping, MegastoneError, FlagConstant
+
+
+ALL_ADDRESSES = FlagConstant('ALL_ADDRESSES')
 
 
 class AccessType(enum.Enum):
@@ -59,20 +61,11 @@ class Hook:
 
     Do not instantiate directly; call Debugger.add_x_hook().
     """
-    func: HookFunc
-    _data: object = field(init=False, repr=False)
-
-
-@dataclass(eq=False)
-class CodeHook(Hook):
-    address: int
-
-
-@dataclass(eq=False)
-class DataHook(Hook):
     address: int
     size: int
     type: AccessType
+    func: HookFunc
+    _data: object = field(init=False, repr=False)
 
 
 class CPUError(MegastoneError):
@@ -127,6 +120,7 @@ class Debugger(abc.ABC):
         self.stack = StackView(self)
         self.curr_hook: Hook = None
         self.curr_access: Access = None
+        self.start_pc = None
 
         self._last_hook: Hook = None
         self._stopped = False
@@ -191,6 +185,7 @@ class Debugger(abc.ABC):
 
         if address is not None:
             self.jump(address, isa)
+        self.start_pc = self.pc
         self._run(count)
 
         if self._stopped:
@@ -207,21 +202,49 @@ class Debugger(abc.ABC):
         """Run a single instruction."""
         return self.run(1)
 
-    def add_code_hook(self, address, func: HookFunc) -> CodeHook:
-        """Add a hook at the given address and return a CodeHook object."""
-        hook = CodeHook(func=func, address=address)
+    def add_hook(self, func: HookFunc, type: AccessType, address, size=1):
+        """
+        Add a hook at the given addresses and return a the new Hook instance.
+        
+        If `address` is `ALL_ADDRESSES`, `size` is ignored and the hook will affect all addresses.
+        Different Debugger implementations may support only some combinations of arguments.
+        """
+        hook = Hook(address=address, size=size, type=type, func=func)
         self._add_hook(hook)
         return hook
 
-    def add_data_hook(self, address, size, type: AccessType, func: HookFunc) -> DataHook:
-        """Add a data hook at the given address and return a DataHook object."""
-        hook = DataHook(func=func, address=address, size=size, type=type)
-        self._add_hook(hook)
-        return hook
+    def add_code_hook(self, func: HookFunc, address, size=1):
+        """Add a code (execute) hook at the given address and return a Hook object."""
+        return self.add_hook(func, AccessType.EXECUTE, address, size)
+
+    def add_read_hook(self, func: HookFunc, address, size=1):
+        """Add a read hook at the given address and return a Hook object."""
+        return self.add_hook(func, AccessType.READ, address, size)
+
+    def add_write_hook(self, func: HookFunc, address, size=1):
+        """Add a write hook at the given address and return a Hook object."""
+        return self.add_hook(func, AccessType.WRITE, address, size)
+
+    def trace(self, func: HookFunc):
+        """Hook all instructions."""
+        return self.add_code_hook(func, ALL_ADDRESSES)
 
     @abc.abstractmethod
     def _add_hook(self, hook: Hook):
+        #Internal hooking implementation.
+        #This function may save arbitrary information in `hook._data` for later use.
         pass
+
+    def _handle_hook(self, hook: Hook, access: Access = None):
+        #Implementations should call this on every hook that is triggered
+        self._last_hook = hook
+        self.curr_hook = hook
+        self.curr_access = access
+        try:
+            hook.func(self)
+        finally:
+            self.curr_hook = None
+            self.curr_access = None
 
     @abc.abstractmethod
     def remove_hook(self, hook: Hook):
@@ -257,17 +280,6 @@ class Debugger(abc.ABC):
         else:
             self.pc = self.stack.pop()
 
-    def _handle_hook(self, hook: Hook, access: Access = None):
-        #Implementations should call this on every hook that is triggered
-        self.curr_hook = hook
-        self._last_hook = hook
-        self.curr_access = access
-        try:
-            hook.func(self)
-        finally:
-            self.curr_hook = None
-            self.curr_access = None
-
 
 class StackView:
     """
@@ -275,8 +287,6 @@ class StackView:
 
     This class can be indexes to access the words on the stack.
     """
-
-    MAX_SLICE_SIZE = 0x1000
 
     def __init__(self, dbg: Debugger):
         self._dbg = dbg

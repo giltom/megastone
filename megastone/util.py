@@ -1,5 +1,4 @@
 import abc
-import sys
 import warnings
 
 
@@ -46,3 +45,10 @@ class MegastoneWarning(Warning):
 def disable_warnings():
     """Disable all megastone warnings."""
     warnings.simplefilter('ignore', MegastoneWarning)
+
+class FlagConstant:
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name

@@ -20,11 +20,12 @@ emu.mem.write_code(func_seg.address, f"""
 """)
 
 def func_hook(emu: Emulator):
+    print('SP:', hex(emu.sp))
     print('stack dump:', emu.stack[:3])
     emu.return_from_function(emu.stack[1] + emu.stack[2])
 
 emu.trace(lambda e: print(e.curr_insn))
-emu.add_code_hook(func_seg.address, func_hook)
-emu.add_code_hook(start_seg.address + 0x10, HOOK_STOP)
+emu.add_code_hook(func_hook, func_seg.address)
+emu.add_code_hook(HOOK_STOP, start_seg.address + 0x10)
 emu.run(address=start_seg.address)
 print(emu.regs.eax)
