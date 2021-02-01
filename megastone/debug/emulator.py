@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import unicorn
 
 from .debugger import Access, AccessType, CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
@@ -92,6 +94,9 @@ class Emulator(Debugger):
         self._stopped = False
         self._fault_cause: FaultCause = None
         self._fault_access: Access = None
+        #since hooks are called from C, exceptions raised inside a hook won't propagate up to emu_start()
+        #so we save the exception in this variable and raise it later
+        self._hook_exception: Exception = None  
 
         self._uc.hook_add(unicorn.UC_HOOK_MEM_INVALID, self._mem_invalid_hook)
         
@@ -138,11 +143,14 @@ class Emulator(Debugger):
 
         self._fault_cause = None
         self._fault_access = None
+        self._hook_exception = None
         
         try:
             self._uc.emu_start(start, -1, count=count) #for now i'm hoping that setting until=-1 means that it won't stop 
         except unicorn.UcError as e:
             self._handle_uc_error(e)
+        if self._hook_exception is not None:
+            raise self._hook_exception
 
     def _handle_uc_error(self, e: unicorn.UcError):
         if self._fault_cause is not None:
@@ -173,27 +181,35 @@ class Emulator(Debugger):
         super().stop()
         self._uc.emu_stop()
 
-    def _create_code_hook(self, hook: Hook, begin, end):
-        return self._uc.hook_add(unicorn.UC_HOOK_CODE, self._code_hook, user_data=hook, begin=begin, end=end)
+    @contextmanager
+    def _catch_hook_exceptions(self):
+        try:
+            yield
+        except Exception as e:
+            self._hook_exception = e
+            self._uc.emu_stop()
 
     def _code_hook(self, uc, address, size, hook: Hook):
-        self._handle_hook(hook)
+        with self._catch_hook_exceptions():
+            self._handle_hook(hook)
 
     def _data_hook(self, uc, uc_access, address, size, value, hook: Hook):
-        access_type = UC_ACCESS_TO_ACCESS_TYPE[uc_access]
-        if access_type is not AccessType.WRITE:
-            value = None
-        access = Access(access_type, address, size, value)
-        self._handle_hook(hook, access)
-
-    def _mem_invalid_hook(self, uc, uc_access, address, size, value, user_data):
-        cause = UC_ACCESS_TO_FAULT_CAUSE.get(uc_access, None)
-        access_type = UC_ACCESS_TO_ACCESS_TYPE.get(uc_access, None)
-
-        if cause is not None and access_type is not None:
+        with self._catch_hook_exceptions():
+            access_type = UC_ACCESS_TO_ACCESS_TYPE[uc_access]
             if access_type is not AccessType.WRITE:
                 value = None
-            self._fault_cause = cause
-            self._fault_access = Access(access_type, address, size, value)
+            access = Access(access_type, address, size, value)
+            self._handle_hook(hook, access)
 
-        return False
+    def _mem_invalid_hook(self, uc, uc_access, address, size, value, user_data):
+        with self._catch_hook_exceptions():
+            cause = UC_ACCESS_TO_FAULT_CAUSE.get(uc_access, None)
+            access_type = UC_ACCESS_TO_ACCESS_TYPE.get(uc_access, None)
+
+            if cause is not None and access_type is not None:
+                if access_type is not AccessType.WRITE:
+                    value = None
+                self._fault_cause = cause
+                self._fault_access = Access(access_type, address, size, value)
+
+            return False
