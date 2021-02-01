@@ -20,8 +20,11 @@ def test_code(code):
     emu.mem.map('rodata', RO_ADDR, ms.Emulator.PAGE_SIZE, ms.Permissions.R)
     emu.add_code_hook(ms.HOOK_STOP, BASE + len(data))
     emu.trace(trace_func)
-
-    emu.run(address=BASE)
+    
+    try:
+        emu.run(address=BASE)
+    except ms.CPUError as e:
+        print(e)
 
 
 ms.disable_warnings()
