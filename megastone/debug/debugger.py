@@ -1,6 +1,7 @@
 import abc
 from dataclasses import dataclass, field
 import enum
+from megastone.files.formats.auto import MAX_MAGIC_SIZE
 from megastone.arch.isa import InstructionSet
 
 from megastone.mem import Memory
@@ -123,9 +124,10 @@ class Debugger(abc.ABC):
         self.mem = mem
         self.arch = self.mem.arch
         self.regs = RegisterMapping(self)
-
+        self.stack = StackView(self)
         self.curr_hook: Hook = None
         self.curr_access: Access = None
+
         self._last_hook: Hook = None
         self._stopped = False
 
@@ -239,23 +241,13 @@ class Debugger(abc.ABC):
         """Return the current instruction about to be executed."""
         return self.mem.disassemble_one(self.pc, self.isa)
 
-    def stack_push(self, value):
-        """Push the given value to the stack."""
-        self.sp -= self.arch.word_size
-        self.mem.write_word(self.sp, value)
-    
-    def stack_pop(self):
-        """Pop and return value from the stack."""
-        value = self.mem.read_word(self.sp)
-        self.sp += self.arch.word_size
-        return value
-
     def return_from_function(self, retval=None):
         """
         Return from the current function.
 
         If `retval` is given, return that value.
         This works only work at the very start of the function (before SP/LR has been modified).
+        Also note that this won't work with calling conventions that expect the callee to pop the arguments of the stack.
         """
         if retval is not None:
             self.regs.retval = retval
@@ -263,8 +255,7 @@ class Debugger(abc.ABC):
         if self.arch.retaddr_reg is not None:
             self.pc = self.regs.retaddr
         else:
-            self.pc = self.mem.read_word(self.sp)
-            self.sp += self.arch.word_size
+            self.pc = self.stack.pop()
 
     def _handle_hook(self, hook: Hook, access: Access = None):
         #Implementations should call this on every hook that is triggered
@@ -276,6 +267,44 @@ class Debugger(abc.ABC):
         finally:
             self.curr_hook = None
             self.curr_access = None
+
+
+class StackView:
+    """
+    Helper class used to access the stack.
+
+    This class can be indexes to access the words on the stack.
+    """
+
+    MAX_SLICE_SIZE = 0x1000
+
+    def __init__(self, dbg: Debugger):
+        self._dbg = dbg
+
+    def get_address(self, index):
+        """Return the address of the word at the given index."""
+        return self._dbg.sp + index * self._dbg.arch.word_size
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            if key.stop is None:
+                raise ValueError('Stack slices must have a stop index')
+            return [self[i] for i in range(*key.indices(key.stop))]
+        return self._dbg.mem.read_word(self.get_address(key))
+
+    def __setitem__(self, key, value):
+        return self._dbg.mem.write_word(self.get_address(key), value)
+
+    def push(self, value):
+        """Push the given value to the stack."""
+        self._dbg.sp -= self._dbg.arch.word_size
+        self[0] = value
+    
+    def pop(self):
+        """Pop a value from the stack and return it."""
+        value = self[0]
+        self._dbg.sp += self._dbg.arch.word_size
+        return value
 
 
 class RegisterMapping(NamespaceMapping):

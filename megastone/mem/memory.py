@@ -1,6 +1,6 @@
 import abc
 from megastone.arch.isa import InstructionSet
-from megastone.util import NamespaceMapping
+from megastone.util import NamespaceMapping, round_up
 from pathlib import Path
 import enum
 from dataclasses import dataclass
@@ -9,6 +9,10 @@ import shutil
 
 from megastone import Architecture
 from megastone.util import NamespaceMapping
+
+
+MIN_ALLOC_ADDRESS = 0x1000
+ALLOC_ROUND_SIZE = 0x1000
 
 
 class Memory(abc.ABC):
@@ -511,10 +515,8 @@ class MappableMemory(SegmentMemory):
 
     def allocate(self, name, size, perms=Permissions.RWX) -> Segment:
         """Automatically allocate a new segment in an unused region."""
-        if len(self.segments) == 0:
-            address = 0x0
-        else:
-            address = max(seg.end for seg in self.segments)
+        address = max([*(seg.end for seg in self.segments), MIN_ALLOC_ADDRESS])
+        address = round_up(address, ALLOC_ROUND_SIZE)
         return self.map(name, address, size, perms)
         
     def _get_all_segments(self):
