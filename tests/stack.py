@@ -1,5 +1,5 @@
 from megastone import Emulator, ARCH_X86, HOOK_STOP
-import monkeyhex
+
 
 emu = Emulator(ARCH_X86)
 emu.allocate_stack(0x1000)
@@ -14,17 +14,17 @@ emu.mem.write_code(start_seg.address, f"""
 """)
 
 emu.mem.write_code(func_seg.address, f"""
-    nop
+    mov eax, 700
     ret
 """)
 
 def func_hook(emu: Emulator):
-    print('SP:', hex(emu.sp))
-    print('stack dump:', emu.stack[:3])
-    emu.return_from_function(emu.stack[1] + emu.stack[2])
+    print(hex(emu.sp), emu.curr_insn)
+    return emu.stack[1] + emu.stack[2]
 
-emu.trace(lambda e: print(e.curr_insn))
-emu.add_code_hook(func_hook, func_seg.address)
+emu.replace_function(func_seg.address, func_hook)
+emu.trace(lambda e: print(hex(e.sp), e.curr_insn))
 emu.add_code_hook(HOOK_STOP, start_seg.address + 0x10)
+
 emu.run(address=start_seg.address)
 print(emu.regs.eax)

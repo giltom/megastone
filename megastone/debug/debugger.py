@@ -54,6 +54,14 @@ class StopHookFunc(HookFunc):
 HOOK_STOP = StopHookFunc()
 
 
+class ReplaceFunctionHookFunc(HookFunc):
+    def __init__(self, func: HookFunc):
+        self.func = func
+    
+    def __call__(self, dbg):
+        dbg.return_from_function(self.func(dbg))
+
+
 @dataclass(eq=False)
 class Hook:
     """
@@ -279,6 +287,19 @@ class Debugger(abc.ABC):
             self.pc = self.regs.retaddr
         else:
             self.pc = self.stack.pop()
+
+    def replace_function(self, address, func: HookFunc):
+        """
+        "replace" the function at `address` with the given callback.
+
+        If `func` returns a none-None value, this value will be returned from the function.
+        Note that you need to parse the function arguments yourself -
+        `func` only gets the `Debugger` as an argument, as usual.
+        This function has the same limitations as `return_from_function`.
+        Return the added `Hook` that can be removed later.
+        """
+        wrapped = ReplaceFunctionHookFunc(func)
+        return self.add_code_hook(wrapped, address)
 
 
 class StackView:
