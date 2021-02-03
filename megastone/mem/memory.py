@@ -1,4 +1,5 @@
 import abc
+from megastone.errors import MegastoneError
 from megastone.arch.isa import InstructionSet
 from megastone.util import NamespaceMapping, round_up
 from pathlib import Path
@@ -481,11 +482,11 @@ class MappableMemory(SegmentMemory):
     def _add_segment(self, seg):
         #Call in a subclass to initialize segments
         if seg.name in self._segments:
-            raise ValueError(f'Segment with name "{seg.name}" already exists')
+            raise MegastoneError(f'Segment with name "{seg.name}" already exists')
 
         for old_seg in self.segments:
             if old_seg.overlaps(seg):
-                raise ValueError('Segment overlap')
+                raise MegastoneError('Segment overlap')
 
         self._segments[seg.name] = seg
         return seg

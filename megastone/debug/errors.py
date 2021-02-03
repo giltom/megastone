@@ -26,7 +26,7 @@ class MemFaultError(CPUError):
         message = f'Memory fault at PC=0x{address:X}: {access.type.verbose_name} {cause.name}'
         if access.type.is_data:
             message += f', address=0x{access.address:X}, size={access.size}'
-            if access.type.write:
+            if access.value is not None:
                 message += f', value=0x{access.value}'
         super().__init__(message, address)
         self.cause = cause

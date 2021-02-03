@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import unicorn
 
 from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
-from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory
+from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError
 from megastone.arch import Architecture, Register
 from megastone.util import round_up
 from megastone.errors import warning, MegastoneError
@@ -73,10 +73,19 @@ class UnicornMemory(MappableMemory):
         return seg
 
     def write_data(self, address, data):
-        self._uc.mem_write(address, data)
+        try:
+            self._uc.mem_write(address, data)
+        except unicorn.UcError as e:
+            raise MemoryAccessError(Access(AccessType.W, address, len(data)), str(e))
 
     def read_data(self, address, size):
-        return bytes(self._uc.mem_read(address, size))
+        try:
+            return bytes(self._uc.mem_read(address, size))
+        except unicorn.UcError as e:
+            raise MemoryAccessError(Access(AccessType.R, address, size), str(e))
+
+    def _handle_uc_error(e: unicorn.UcError):
+        atype = UC_ACCESS_TO_ACCESS_TYPE[e]
 
 
 class Emulator(Debugger):
