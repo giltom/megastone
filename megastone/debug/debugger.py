@@ -1,142 +1,18 @@
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import enum
-from megastone.arch.isa import InstructionSet
 
+from megastone.arch.isa import InstructionSet
 from megastone.mem import Memory
 from megastone.arch import Register
-from megastone.util import NamespaceMapping, MegastoneError, FlagConstant
+from megastone.util import NamespaceMapping, FlagConstant
+from .hooks import Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
+from .access import Access, AccessType
+
 
 
 ALL_ADDRESSES = FlagConstant('ALL_ADDRESSES')
 
-
-class AccessType(enum.Enum):
-    READ = enum.auto()
-    WRITE = enum.auto()
-    EXECUTE = enum.auto()
-
-
-@dataclass(frozen=True)
-class Access:
-    type: AccessType
-    address: int
-    size: int
-    value: int = None #value for writes
-
-    def __repr__(self):
-        result = f'{self.__class__.__name__}(type=AccessType.{self.type.name}, address=0x{self.address:X}, size={self.size}'
-        if self.value is not None:
-            result += f', value=0x{self.value:X}'
-        result += ')'
-        return result
-
-
-class HookFunc(abc.ABC):
-    """ABC that can be used to define hooks (you can also use a plain function)."""
-
-    @abc.abstractmethod
-    def __call__(self, dbg):
-        """
-        Function that runs every time the hook is hit.
-        
-        By default, the hook will not stop execution. If you want to stop, call dbg.stop().
-        """
-        pass
-
-
-class StopHookFunc(HookFunc):
-    """Basic hook that simply stops execution."""
-
-    def __call__(self, dbg):
-        dbg.stop()
-
-    def __repr__(self):
-        return 'HOOK_STOP'
-
-HOOK_STOP = StopHookFunc()
-
-
-class StopOnceHookFunc(HookFunc):
-    """A hook that will stop execution once, then remove itself."""
-    
-    def __call__(self, dbg):
-        dbg.remove_hook(dbg.curr_hook)
-        dbg.stop()
-
-    def __repr__(self):
-        return 'HOOK_STOP_ONCE'
-
-HOOK_STOP_ONCE = StopOnceHookFunc()
-
-
-class BreakHookFunc(HookFunc):
-    """Breakpoint-like hook: stops execution unless starting execution from its address."""
-
-    def __call__(self, dbg):
-        if dbg.start_pc != dbg.pc:
-            dbg.stop()
-
-    def __repr__(self):
-        return 'HOOK_BREAK'
-
-HOOK_BREAK = BreakHookFunc()
-
-
-class ReplaceFunctionHookFunc(HookFunc):
-    def __init__(self, func: HookFunc):
-        self.func = func
-    
-    def __call__(self, dbg):
-        dbg.return_from_function(self.func(dbg))
-
-    def __repr__(self):
-        return f'ReplaceFunctionHookFunc({self.func})'
-
-
-@dataclass(eq=False)
-class Hook:
-    """
-    Hook object that can be used to inspect or remove existing hooks.
-
-    Do not instantiate directly; call Debugger.add_x_hook().
-    """
-    address: int
-    size: int
-    type: AccessType
-    func: HookFunc
-    _data: object = field(init=False, repr=False)
-
-
-class CPUError(MegastoneError):
-    def __init__(self, message, address):
-        super().__init__(message)
-        self.address = address
-
-
-class InvalidInsnError(CPUError):
-    def __init__(self, address):
-        super().__init__(f'Invalid instruction at 0x{address:X}', address)
-
-
-class FaultCause(enum.Enum):
-    UNMAPPED = enum.auto()
-    PROTECTED = enum.auto()
-
-
-class MemFaultError(CPUError):
-    def __init__(self, address, cause: FaultCause, access: Access):
-        message = f'Memory fault at PC=0x{address:X}: {access.type.name} {cause.name}'
-        if access.type is not AccessType.EXECUTE:
-            message += f', address=0x{access.address:X}, size={access.size}'
-            if access.type is AccessType.WRITE:
-                message += f', value=0x{access.value}'
-        super().__init__(message, address)
-        self.cause = cause
-        self.access = access
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}(0x{self.address:X}, FaultCause.{self.cause.name}, {self.access})'
 
 
 class StopType(enum.Enum):

@@ -1,5 +1,4 @@
 import abc
-import warnings
 
 
 def parse_hex_int(s):
@@ -8,10 +7,6 @@ def parse_hex_int(s):
 
 def hex_spaces(data):
     return ' '.join(bytes([b]).hex() for b in data)
-
-
-def warning(s):
-    warnings.warn(s, MegastoneWarning, stacklevel=2)
 
 
 def round_up(value, size):
@@ -32,19 +27,6 @@ class NamespaceMapping(abc.ABC):
             return self[attr]
         except KeyError as e:
             raise AttributeError() from e
-
-
-class MegastoneError(Exception):
-    """Base class for all custom exceptions."""
-    pass
-
-class MegastoneWarning(Warning):
-    """Base class for all custom warnings."""
-    pass
-
-def disable_warnings():
-    """Disable all megastone warnings."""
-    warnings.simplefilter('ignore', MegastoneWarning)
 
 class FlagConstant:
     def __init__(self, name):

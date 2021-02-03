@@ -1,7 +1,7 @@
 from ..format import ExecFormat
 from ..execfile import ExecFile
 from .binary import FORMAT_BINARY
-from megastone.util import warning
+from megastone.errors import warning
 
 
 MAX_MAGIC_SIZE = 0x10

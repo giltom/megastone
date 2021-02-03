@@ -6,7 +6,7 @@ import capstone.arm_const
 from ..architecture import Architecture, Endian
 from ..regs import RegisterSet
 from ..isa import InstructionSet
-from megastone.util import MegastoneError
+from megastone.errors import MegastoneError
 
 
 PC_THUMB_MASK = 1

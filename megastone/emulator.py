@@ -2,12 +2,12 @@ from contextlib import contextmanager
 
 import unicorn
 
-from .debugger import Access, AccessType, CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
-from megastone.mem.memory import MappableMemory, Permissions, Segment, SegmentMemory
-from megastone.arch.architecture import Architecture
-from megastone.arch.regs import Register
-from megastone.util import MegastoneError, warning, round_up
-from megastone.files.execfile import ExecFile
+from megastone.debug import Access, AccessType, CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
+from megastone.mem import MappableMemory, Permissions, Segment, SegmentMemory
+from megastone.arch import Architecture, Register
+from megastone.util import round_up
+from megastone.errors import warning, MegastoneError
+from megastone.files import ExecFile
 
 
 PERM_TO_UC_PROT = {
