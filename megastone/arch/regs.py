@@ -75,9 +75,6 @@ class RegisterSet(NamespaceMapping):
     def __iter__(self):
         yield from self._regs.values()
 
-    def names(self):
-        yield from self._regs
-
     def __len__(self):
         return len(self._regs)
     

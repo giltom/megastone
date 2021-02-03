@@ -1,9 +1,10 @@
 import enum
 import platform
 
-from .regs import Register, RegisterSet
 from megastone.db import DatabaseEntry
+from megastone.util import bits_to_mask, size_to_mask
 from .isa import InstructionSet
+from .regs import Register, RegisterSet
 
 
 class Endian(enum.Enum):
@@ -16,7 +17,9 @@ class Endian(enum.Enum):
     
     def encode_int(self, value, size):
         """Convert int to bytes in this endian"""
-        return int.to_bytes(value, size, signed=True)
+        if value < 0:
+            value = value & size_to_mask(size)
+        return value.to_bytes(size, self.value)
 
     def encode_8(self, value):
         return self.encode_int(value, 1)
@@ -71,6 +74,10 @@ class Architecture(DatabaseEntry):
     def isa(self) -> InstructionSet:
         """The Architecture's default ISA."""
         return self.isas[0]
+
+    @property
+    def word_mask(self):
+        return bits_to_mask(self.bits)
     
     def assemble(self, assembly, address=0):
         """Assemble with the default ISA. See InstructionSet.assemble()."""

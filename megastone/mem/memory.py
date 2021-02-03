@@ -171,7 +171,7 @@ class Memory(abc.ABC):
         data = self.read(start, size)
         search_start = 0
         while True:
-            offset = data.find(value, start=search_start)
+            offset = data.find(value, search_start)
             if offset == -1:
                 return None
             address = start + offset
@@ -306,10 +306,6 @@ class Segment:
     def contains_address(self, address):
         return self.start <= address < self.end
 
-    def contains(self, other):
-        """Return True if this segments contains the other segment."""
-        return self.start <= other.start and other.end <= self.end
-
     def get_start(self):
         return self.start
     
@@ -361,7 +357,7 @@ class SegmentMemory(Memory):
         super().__init__(arch)
         self.segments = SegmentMapping(self)
 
-    def search_all(self, value, *, alignment=None, perms=AccessType.NONE):
+    def search_all(self, value, *, alignment=1, perms=AccessType.NONE):
         """
         Search all segments for bytes, returning the found address or None if not found.
         

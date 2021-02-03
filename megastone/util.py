@@ -15,6 +15,14 @@ def round_up(value, size):
     return (value // size + 1) * size
 
 
+def bits_to_mask(bits):
+    return (1 << bits) - 1
+
+
+def size_to_mask(size):
+    return bits_to_mask(size * 8)
+
+
 class NamespaceMapping(abc.ABC):
     """Basic mapping type that supports access by both index and attribute."""
 

@@ -56,6 +56,10 @@ class InstructionSet(DatabaseEntry):
     def uc_supported(self):
         return self.uc_arch is not None
 
+    @property
+    def fully_supported(self):
+        return self.ks_supported and self.cs_supported and self.uc_supported
+
     def assemble(self, assembly, address=0):
         """
         Assemble the given instructions and return the assembled bytes.
