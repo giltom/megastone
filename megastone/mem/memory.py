@@ -2,13 +2,13 @@ import abc
 from megastone.arch.isa import InstructionSet
 from megastone.util import NamespaceMapping, round_up
 from pathlib import Path
-import enum
 from dataclasses import dataclass
 import io
 import shutil
 
-from megastone import Architecture
+from megastone.arch import Architecture
 from megastone.util import NamespaceMapping
+from .access import AccessType
 
 
 MIN_ALLOC_ADDRESS = 0x1000
@@ -270,56 +270,6 @@ class MemoryIO(io.RawIOBase):
     def get_data(self):
         """Return the entire data covered by the file"""
         return self._mem.read(self._start, self._size)
-
-
-class Permissions(enum.Flag):
-    """Memory permissions"""
-
-    NONE = 0
-    R = enum.auto()
-    W = enum.auto()
-    X = enum.auto()
-
-    RW = R | W
-    RX = R | X
-    RWX = R | W | X
-
-    @property
-    def readable(self):
-        return bool(self & Permissions.R)
-
-    @property
-    def writable(self):
-        return bool(self & Permissions.W)
-
-    @property
-    def executable(self):
-        return bool(self & Permissions.X)
-
-    def contains(self, other):
-        """Return True if these Permissions contain all of the permissions in other."""
-        return self & other == other
-
-    @classmethod
-    def parse(cls, string):
-        """Parse a string of the form "rwx" and return a Permissions."""
-        total = cls.NONE
-        for c in string:
-            try:
-                perm = cls[c.upper()]
-            except KeyError:
-                pass
-            else:
-                total |= perm
-        return total
-
-    @classmethod
-    def __str__(self):
-        res = ''
-        for c in 'RWX':
-            if self & Permissions[c]:
-                res += c
-        return res
         
 
 @dataclass(frozen=True, repr=False)
@@ -329,7 +279,7 @@ class Segment:
     name: str
     start: int
     size: int
-    perms: Permissions
+    perms: AccessType
     mem: Memory
 
     @property
@@ -410,7 +360,7 @@ class SegmentMemory(Memory):
         super().__init__(arch)
         self.segments = SegmentMapping(self)
 
-    def search_all(self, value, *, alignment=None, perms=Permissions.NONE):
+    def search_all(self, value, *, alignment=None, perms=AccessType.NONE):
         """
         Search all segments for bytes, returning the found address or None if not found.
         
@@ -427,7 +377,7 @@ class SegmentMemory(Memory):
         isa = self._fix_isa(isa)
 
         code = isa.assemble(assembly)
-        return self.search_all(code, alignment=isa.insn_alignment, perms=Permissions.X)
+        return self.search_all(code, alignment=isa.insn_alignment, perms=AccessType.X)
 
     @abc.abstractmethod
     def _get_all_segments(self):
@@ -470,7 +420,7 @@ class SegmentMapping(NamespaceMapping):
         yield from self._mem._get_all_segments()
     
     def with_perms(self, perms):
-        """Return an iterable of all segments that contain the given permissions."""
+        """Return an iterable of all segments that contain the given AccessType."""
         for seg in self:
             if seg.perms.contains(perms):
                 yield seg
@@ -487,7 +437,7 @@ class MappableMemory(SegmentMemory):
         self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
 
     @abc.abstractmethod
-    def map(self, name, start, size, perms=Permissions.RWX) -> Segment:
+    def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
         """
         Allocate a new Segment, initialized to 0, at the given address range.
         
@@ -495,13 +445,13 @@ class MappableMemory(SegmentMemory):
         """
         #Implementation should call _add_segment() and also do any other needed maintenance....
 
-    def load(self, name, address, data, perms=Permissions.RWX) -> Segment:
+    def load(self, name, address, data, perms=AccessType.RWX) -> Segment:
         """Shorthand for map() followed by write()."""
         seg = self.map(name, address, len(data), perms)
         seg.write(data)
         return seg
     
-    def load_file(self, name, address, path, perms=Permissions.RWX) -> Segment:
+    def load_file(self, name, address, path, perms=AccessType.RWX) -> Segment:
         """Load the file at the given path."""
         #Currently we read the entire file at once bc we need to know the file size in advance
         #If performance becomes a problem this can be improved by using seek() and write_fileobj()
@@ -513,7 +463,7 @@ class MappableMemory(SegmentMemory):
         for seg in mem.segments:
             self.load(seg.name, seg.start, seg.read(), seg.perms)
 
-    def allocate(self, name, size, perms=Permissions.RWX) -> Segment:
+    def allocate(self, name, size, perms=AccessType.RWX) -> Segment:
         """Automatically allocate a new segment in an unused region."""
         address = max([*(seg.end for seg in self.segments), MIN_ALLOC_ADDRESS])
         address = round_up(address, ALLOC_ROUND_SIZE)

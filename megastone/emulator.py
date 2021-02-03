@@ -2,56 +2,56 @@ from contextlib import contextmanager
 
 import unicorn
 
-from megastone.debug import Access, AccessType, CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
-from megastone.mem import MappableMemory, Permissions, Segment, SegmentMemory
+from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
+from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory
 from megastone.arch import Architecture, Register
 from megastone.util import round_up
 from megastone.errors import warning, MegastoneError
 from megastone.files import ExecFile
 
 
-PERM_TO_UC_PROT = {
-    Permissions.R: unicorn.UC_PROT_READ,
-    Permissions.W: unicorn.UC_PROT_WRITE,
-    Permissions.X: unicorn.UC_PROT_EXEC
+ACCESS_TYPE_TO_UC_PROT = {
+    AccessType.R: unicorn.UC_PROT_READ,
+    AccessType.W: unicorn.UC_PROT_WRITE,
+    AccessType.X: unicorn.UC_PROT_EXEC
 }
 
-ACCESS_TYPE_TO_UC_TYPE = {
-    AccessType.READ: unicorn.UC_HOOK_MEM_READ,
-    AccessType.WRITE: unicorn.UC_HOOK_MEM_WRITE,
-    AccessType.EXECUTE : unicorn.UC_HOOK_CODE
+ACCESS_TYPE_TO_UC_HOOK = {
+    AccessType.R: unicorn.UC_HOOK_MEM_READ,
+    AccessType.W: unicorn.UC_HOOK_MEM_WRITE,
+    AccessType.RW: unicorn.UC_HOOK_MEM_READ | unicorn.UC_HOOK_MEM_WRITE,
+    AccessType.X: unicorn.UC_HOOK_CODE
 }
 
 UC_ACCESS_TO_ACCESS_TYPE = {
-    unicorn.UC_MEM_READ : AccessType.READ,
-    unicorn.UC_MEM_READ_UNMAPPED : AccessType.READ,
-    unicorn.UC_MEM_WRITE_PROT : AccessType.READ,
+    unicorn.UC_MEM_READ: AccessType.R,
+    unicorn.UC_MEM_READ_UNMAPPED: AccessType.R,
+    unicorn.UC_MEM_WRITE_PROT: AccessType.R,
 
-    unicorn.UC_MEM_WRITE : AccessType.WRITE,
-    unicorn.UC_MEM_WRITE_UNMAPPED : AccessType.WRITE,
-    unicorn.UC_MEM_WRITE_PROT : AccessType.WRITE,
+    unicorn.UC_MEM_WRITE: AccessType.W,
+    unicorn.UC_MEM_WRITE_UNMAPPED: AccessType.W,
+    unicorn.UC_MEM_WRITE_PROT: AccessType.W,
 
-    unicorn.UC_MEM_FETCH : AccessType.EXECUTE,
-    unicorn.UC_MEM_FETCH_UNMAPPED : AccessType.EXECUTE,
-    unicorn.UC_MEM_FETCH_PROT : AccessType.EXECUTE
+    unicorn.UC_MEM_FETCH: AccessType.X,
+    unicorn.UC_MEM_FETCH_UNMAPPED: AccessType.X,
+    unicorn.UC_MEM_FETCH_PROT: AccessType.X
 }
 
 UC_ACCESS_TO_FAULT_CAUSE = {
-    unicorn.UC_MEM_READ_UNMAPPED : FaultCause.UNMAPPED,
-    unicorn.UC_MEM_WRITE_UNMAPPED : FaultCause.UNMAPPED,
-    unicorn.UC_MEM_FETCH_UNMAPPED : FaultCause.UNMAPPED,
+    unicorn.UC_MEM_READ_UNMAPPED: FaultCause.UNMAPPED,
+    unicorn.UC_MEM_WRITE_UNMAPPED: FaultCause.UNMAPPED,
+    unicorn.UC_MEM_FETCH_UNMAPPED: FaultCause.UNMAPPED,
 
-    unicorn.UC_MEM_READ_PROT : FaultCause.PROTECTED,
-    unicorn.UC_MEM_WRITE_PROT : FaultCause.PROTECTED,
-    unicorn.UC_MEM_FETCH_PROT : FaultCause.PROTECTED
+    unicorn.UC_MEM_READ_PROT: FaultCause.PROTECTED,
+    unicorn.UC_MEM_WRITE_PROT: FaultCause.PROTECTED,
+    unicorn.UC_MEM_FETCH_PROT: FaultCause.PROTECTED
 }
 
-
-def perms_to_uc_prot(perms: Permissions):
-    result = unicorn.UC_PROT_NONE
-    for perm, prot in PERM_TO_UC_PROT.items():
-        if perms & perm:
-            result |= prot
+def perms_to_uc_prot(perms: AccessType):
+    result = 0
+    for atype, flag in ACCESS_TYPE_TO_UC_PROT.items():
+        if perms & atype:
+            result |= flag
     return result
 
 
@@ -60,7 +60,7 @@ class UnicornMemory(MappableMemory):
         super().__init__(arch)
         self._uc = uc
 
-    def map(self, name, start, size, perms=Permissions.RWX) -> Segment:
+    def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
         if start % Emulator.PAGE_SIZE != 0:
             raise MegastoneError(f'Emulator segment addresses must be aligned 0x{Emulator.PAGE_SIZE:X}')
         if size % Emulator.PAGE_SIZE != 0:
@@ -124,7 +124,7 @@ class Emulator(Debugger):
         """Return n rounded up to the emulator page size."""
         return round_up(n, Emulator.PAGE_SIZE)
 
-    def allocate_stack(self, size, *, name='stack', perms=Permissions.RWX):
+    def allocate_stack(self, size, *, name='stack', perms=AccessType.RWX):
         """Allocate a stack segment and set the SP to point to its top."""
         segment = self.mem.allocate(name, size, perms)
         self.sp = segment.end - self.arch.word_size
@@ -160,9 +160,11 @@ class Emulator(Debugger):
         raise CPUError(str(e), self.pc) from None
 
     def _add_hook(self, hook: Hook):
-        uc_type = ACCESS_TYPE_TO_UC_TYPE[hook.type]
+        uc_type = ACCESS_TYPE_TO_UC_HOOK.get(hook.type, None)
+        if uc_type is None:
+            raise NotImplementedError(f'Hook type {hook.type} not supported by unicorn')
 
-        if hook.type is AccessType.EXECUTE:
+        if hook.type is AccessType.X:
             callback = self._code_hook
         else:
             callback = self._data_hook
@@ -196,7 +198,7 @@ class Emulator(Debugger):
     def _data_hook(self, uc, uc_access, address, size, value, hook: Hook):
         with self._catch_hook_exceptions():
             access_type = UC_ACCESS_TO_ACCESS_TYPE[uc_access]
-            if access_type is not AccessType.WRITE:
+            if access_type is not AccessType.W:
                 value = None
             access = Access(access_type, address, size, value)
             self._handle_hook(hook, access)
@@ -207,7 +209,7 @@ class Emulator(Debugger):
             access_type = UC_ACCESS_TO_ACCESS_TYPE.get(uc_access, None)
 
             if cause is not None and access_type is not None:
-                if access_type is not AccessType.WRITE:
+                if access_type is not AccessType.W:
                     value = None
                 self._fault_cause = cause
                 self._fault_access = Access(access_type, address, size, value)

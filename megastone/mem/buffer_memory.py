@@ -1,4 +1,5 @@
-from .memory import MappableMemory, Segment, Permissions
+from .memory import MappableMemory, Segment
+from .access import AccessType
 
 
 class BufferSegment(Segment):
@@ -16,7 +17,7 @@ class BufferMemory(MappableMemory):
     Useful for analyzing or patching firmwares.
     """
     
-    def map(self, name, start, size, perms=Permissions.RWX):
+    def map(self, name, start, size, perms=AccessType.RWX):
         return self._add_segment(BufferSegment(name, start, size, perms, self))
 
     def write_data(self, address, data):

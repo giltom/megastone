@@ -3,11 +3,10 @@ from dataclasses import dataclass
 import enum
 
 from megastone.arch.isa import InstructionSet
-from megastone.mem import Memory
+from megastone.mem import Memory, Access, AccessType
 from megastone.arch import Register
 from megastone.util import NamespaceMapping, FlagConstant
 from .hooks import Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
-from .access import Access, AccessType
 
 
 
@@ -130,15 +129,19 @@ class Debugger(abc.ABC):
 
     def add_code_hook(self, func: HookFunc, address, size=1):
         """Add a code (execute) hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.EXECUTE, address, size)
+        return self.add_hook(func, AccessType.X, address, size)
 
     def add_read_hook(self, func: HookFunc, address, size=1):
         """Add a read hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.READ, address, size)
+        return self.add_hook(func, AccessType.R, address, size)
 
     def add_write_hook(self, func: HookFunc, address, size=1):
         """Add a write hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.WRITE, address, size)
+        return self.add_hook(func, AccessType.W, address, size)
+
+    def add_rw_hook(self, func: HookFunc, address, size=1):
+        """Add a read/write hook at the given address and return a Hook object."""
+        return self.add_hook(func, AccessType.RW, address, size)
 
     def trace(self, func: HookFunc):
         """Hook all instructions."""

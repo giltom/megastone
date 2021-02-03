@@ -2,7 +2,7 @@ import abc
 from dataclasses import dataclass, field
 
 
-from .access import AccessType
+from megastone.mem import AccessType
 
 
 class HookFunc(abc.ABC):
