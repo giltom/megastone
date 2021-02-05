@@ -3,6 +3,7 @@ import importlib
 import unicorn
 
 from megastone.util import NamespaceMapping
+import abc
 
 
 INVALID_REG_NAMES = ['invalid']
@@ -83,3 +84,54 @@ class RegisterSet(NamespaceMapping):
 
     def has_reg_name(self, name):
         return name in self._regs
+
+
+class BaseRegisterState(NamespaceMapping):
+    """
+    Base class representing the current register state in the CPU.
+    
+    Registers can be read and modified via dict-like or namespace-like access.
+    """
+
+    def __init__(self, arch):
+        self._arch = arch
+        self._generic_regs = dict(
+            gen_pc=arch.pc_reg,
+            gen_sp=arch.sp_reg,
+            retaddr=arch.retaddr_reg,
+            retval=arch.retval_reg
+        )
+
+    @abc.abstractmethod
+    def read(self, reg: Register) -> int:
+        """Read the value of a Register."""
+        pass
+
+    @abc.abstractmethod
+    def write(self, reg: Register, value):
+        """Set the value of a register."""
+        pass
+
+    def __getitem__(self, key):
+        reg = self._name_to_reg(key)
+        return self.read(reg)
+    
+    def __setitem__(self, key, value):
+        reg = self._name_to_reg(key)
+        self.write(reg, value)
+
+    def __setattr__(self, attr, value):
+        if attr.startswith('_'):
+            super().__setattr__(attr, value)
+            return
+
+        try:
+            self[attr] = value
+        except KeyError as e:
+            raise AttributeError('No such register') from e
+
+    def _name_to_reg(self, name):
+        reg = self._generic_regs.get(name, None)
+        if reg is not None:
+            return reg
+        return self._arch.regs[name]

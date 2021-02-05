@@ -136,10 +136,10 @@ class Emulator(Debugger):
         self.sp = segment.end - self.arch.word_size
         return segment
 
-    def get_reg(self, reg: Register) -> int:
+    def _read_reg(self, reg: Register) -> int:
         return self._uc.reg_read(reg.uc_id)
 
-    def set_reg(self, reg: Register, value):
+    def _write_reg(self, reg: Register, value):
         return self._uc.reg_write(reg.uc_id, value)
 
     def _run(self, count=None):

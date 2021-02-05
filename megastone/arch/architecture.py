@@ -6,7 +6,7 @@ import unicorn
 from megastone.db import DatabaseEntry
 from megastone.util import bits_to_mask, size_to_mask
 from .isa import InstructionSet
-from .regs import Register, RegisterSet
+from .regs import BaseRegisterState, Register, RegisterSet
 
 
 class Endian(enum.Enum):
@@ -22,18 +22,6 @@ class Endian(enum.Enum):
         if value < 0:
             value = value & size_to_mask(size)
         return value.to_bytes(size, self.value)
-
-    def encode_8(self, value):
-        return self.encode_int(value, 1)
-
-    def encode_16(self, value):
-        return self.encode_int(value, 2)
-    
-    def encode_32(self, value):
-        return self.encode_int(value, 4)
-    
-    def encode_64(self, value):
-        return self.encode_int(value, 8)
 
 
 
@@ -128,12 +116,8 @@ class Architecture(DatabaseEntry):
         """Try to determine the current ISA from an address."""
         return self.isa
 
-    def isa_from_regs(self, regs) -> InstructionSet:
-        """
-        Try to determine the current ISA from register values.
-
-        regs should be a namespace that maps register names to values.
-        """
+    def isa_from_regs(self, regs: BaseRegisterState) -> InstructionSet:
+        """Determine the current ISA from a BaseRegisterState."""
         return self.isa
 
 

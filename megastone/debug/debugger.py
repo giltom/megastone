@@ -2,9 +2,8 @@ import abc
 from dataclasses import dataclass
 import enum
 
-from megastone.arch.isa import InstructionSet
 from megastone.mem import Memory, Access, AccessType
-from megastone.arch import Register
+from megastone.arch import Register, BaseRegisterState, InstructionSet
 from megastone.util import NamespaceMapping, FlagConstant
 from .hooks import Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
 
@@ -31,21 +30,13 @@ class Debugger(abc.ABC):
     def __init__(self, mem: Memory):
         self.mem = mem
         self.arch = self.mem.arch
-        self.regs = RegisterMapping(self)
+        self.regs = RegisterState(self)
         self.stack = StackView(self)
         self.curr_hook: Hook = None
         self.curr_access: Access = None
         self.start_pc = None
 
         self._stop_hook: Hook = None #Hook that stopped execution
-
-    @abc.abstractmethod
-    def get_reg(self, reg: Register) -> int:
-        pass
-
-    @abc.abstractmethod
-    def set_reg(self, reg: Register, value):
-        pass
 
     @property
     def isa(self):
@@ -216,6 +207,14 @@ class Debugger(abc.ABC):
         wrapped = ReplaceFunctionHookFunc(func)
         return self.add_code_hook(wrapped, address)
 
+    @abc.abstractmethod
+    def _read_reg(self, reg: Register) -> int:
+        pass
+
+    @abc.abstractmethod
+    def _write_reg(self, reg: Register, value):
+        pass
+
 
 class StackView:
     """
@@ -253,34 +252,15 @@ class StackView:
         return value
 
 
-class RegisterMapping(NamespaceMapping):
+class RegisterState(BaseRegisterState):
     """Helper class used to access registers."""
 
     def __init__(self, dbg: Debugger):
-        super().__setattr__('_dbg', dbg)
-        super().__setattr__('_generic_regs', dict(
-            gen_pc=dbg.arch.pc_reg,
-            gen_sp=dbg.arch.sp_reg,
-            retaddr=dbg.arch.retaddr_reg,
-            retval=dbg.arch.retval_reg
-        ))
+        super().__init__(dbg.arch)
+        self._dbg = dbg
 
-    def __getitem__(self, key):
-        reg = self._name_to_reg(key)
-        return self._dbg.get_reg(reg)
-    
-    def __setitem__(self, key, value):
-        reg = self._name_to_reg(key)
-        self._dbg.set_reg(reg, value)
+    def read(self, reg) -> Register:
+        return self._dbg._read_reg(reg)
 
-    def __setattr__(self, attr, value):
-        try:
-            self[attr] = value
-        except KeyError as e:
-            raise AttributeError('No such register') from e
-
-    def _name_to_reg(self, name):
-        reg = self._generic_regs.get(name, None)
-        if reg is not None:
-            return reg
-        return self._dbg.arch.regs[name]
+    def write(self, reg, value):
+        return self._dbg._write_reg(reg, value)

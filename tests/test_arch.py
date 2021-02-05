@@ -45,3 +45,7 @@ def test_regs(arch):
 
 def test_reg_name(arch):
     assert arch.retval_reg.name in repr(arch.retval_reg)
+
+def test_multi_isa():
+    with pytest.raises(AttributeError):
+        ARCH_ARM.isa
