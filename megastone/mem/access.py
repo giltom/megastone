@@ -12,6 +12,7 @@ class AccessType(enum.Flag):
 
     RW = R | W
     RX = R | X
+    WX = W | X
     RWX = R | W | X
 
     @property
