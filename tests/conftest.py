@@ -1,6 +1,6 @@
 import pytest
 
-from megastone import Architecture
+from megastone import Architecture, ARCH_ARM
 
 
 def get_id(arch_isa):
@@ -28,3 +28,14 @@ def isa(arch_isa):
 @pytest.fixture
 def nop(isa):
     return isa.assemble('nop')
+
+
+@pytest.fixture(params=ARCH_ARM.isas)
+def arm_isa(request):
+    return request.param
+
+@pytest.fixture
+def other_arm_isa(arm_isa):
+    if arm_isa is ARCH_ARM.arm:
+        return ARCH_ARM.thumb
+    return ARCH_ARM.arm
