@@ -77,7 +77,7 @@ class UnicornMemory(MappableMemory):
         try:
             self._uc.mem_write(address, data)
         except unicorn.UcError as e:
-            raise MemoryAccessError(Access(AccessType.W, address, len(data)), str(e))
+            raise MemoryAccessError(Access(AccessType.W, address, len(data), data), str(e))
 
     def read_data(self, address, size):
         try:
@@ -194,8 +194,8 @@ class Emulator(Debugger):
     def _catch_hook_exceptions(self):
         try:
             yield
-        except:
-            self._hook_exception = sys.exc_info()[0]
+        except BaseException as e:
+            self._hook_exception = e
             self._uc.emu_stop()
 
     def _code_hook(self, uc, address, size, hook: Hook):
@@ -205,8 +205,7 @@ class Emulator(Debugger):
     def _data_hook(self, uc, uc_access, address, size, value, hook: Hook):
         with self._catch_hook_exceptions():
             access_type = UC_ACCESS_TO_ACCESS_TYPE[uc_access]
-            if access_type is not AccessType.W:
-                value = None
+            value = self._get_access_value(access_type, size, value)
             access = Access(access_type, address, size, value)
             self._handle_hook(hook, access)
 
@@ -214,11 +213,15 @@ class Emulator(Debugger):
         with self._catch_hook_exceptions():
             cause = UC_ACCESS_TO_FAULT_CAUSE.get(uc_access, None)
             access_type = UC_ACCESS_TO_ACCESS_TYPE.get(uc_access, None)
+            value = self._get_access_value(access_type, size, value)
 
             if cause is not None and access_type is not None:
-                if access_type is not AccessType.W:
-                    value = None
                 self._fault_cause = cause
                 self._fault_access = Access(access_type, address, size, value)
 
             return False
+
+    def _get_access_value(self, atype, size, value):
+        if atype is AccessType.W:
+            return self.arch.endian.encode_int(value, size)
+        return None

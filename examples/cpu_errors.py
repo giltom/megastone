@@ -1,3 +1,4 @@
+from megastone.arch.isa import DisassemblyError
 import megastone as ms
 
 
@@ -9,13 +10,13 @@ RO_ADDR = 0x2000
 def trace_func(emu: ms.Emulator):
     try:
         print(emu.curr_insn)
-    except ValueError:
-        pass
+    except DisassemblyError:
+        print('Invalid assembly')
 
 
 def test_code(code):
     emu = ms.Emulator(ARCH)
-    data = ARCH.assemble(code, BASE)
+    data = ARCH.default_isa.assemble(code, BASE)
     emu.mem.load('seg', BASE, data)
     emu.mem.map('rodata', RO_ADDR, ms.Emulator.PAGE_SIZE, ms.AccessType.R)
     emu.add_code_hook(ms.HOOK_STOP, BASE + len(data))

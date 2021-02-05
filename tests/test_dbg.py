@@ -208,7 +208,7 @@ def test_write_hook(rw_test_dbg: Debugger, access_hook):
     rw_test_dbg.add_write_hook(access_hook, TEST_ADDRESS)
     rw_test_dbg.run()
     assert access_hook.count == 1
-    assert access_hook.access == Access(AccessType.W, TEST_ADDRESS, 1, 3)
+    assert access_hook.access == Access(AccessType.W, TEST_ADDRESS, 1, b'\x03')
 
 def test_rw_hook(rw_test_dbg: Debugger, access_hook):
     rw_test_dbg.add_rw_hook(access_hook, TEST_ADDRESS)
@@ -247,7 +247,7 @@ def test_mem_fault(dbg):
     with pytest.raises(MemFaultError) as info:
         dbg.run(3)
     assert info.value.cause is FaultCause.UNMAPPED
-    assert info.value.access == Access(AccessType.W, address, 4, value)
+    assert info.value.access == Access(AccessType.W, address, 4, dbg.arch.encode_word(value))
     assert info.value.address == CODE_ADDRESS + 8
 
 def test_stack_read(arch_dbg, arch):

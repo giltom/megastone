@@ -19,11 +19,11 @@ def test_read_error(emu):
 
 def test_write_error(emu):
     address = 0x1001
-    size = 0x3
+    data = b'3'*3
 
     with pytest.raises(MemoryAccessError) as info:
-        emu.mem.write(address, b'3'*size)
-    assert info.value.access == Access(AccessType.W, address, size)
+        emu.mem.write(address, data)
+    assert info.value.access == Access(AccessType.W, address, len(data), data)
 
 def test_alloc_stack(emu: Emulator):
     emu.allocate_stack(0x1000)

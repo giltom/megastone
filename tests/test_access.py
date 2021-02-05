@@ -5,7 +5,7 @@ def test_parse():
 
 def test_repr():
     address = 0x1000
-    access = Access(AccessType.W, address, 5, 60)
+    access = Access(AccessType.W, address, 5, b'AAAA')
     assert hex(address) in repr(access)
 
 def test_flags():

@@ -82,11 +82,11 @@ class Access:
     type: AccessType
     address: int
     size: int
-    value: int = None #value for writes
+    value: bytes = None #value for writes
 
     def __repr__(self):
-        result = f'{self.__class__.__name__}(type=AccessType.{self.type.name}, address=0x{self.address:X}, size={self.size}'
+        result = f'{self.__class__.__name__}(type=AccessType.{self.type.name}, address=0x{self.address:X}, size=0x{self.size:X}'
         if self.value is not None:
-            result += f', value=0x{self.value:X}'
+            result += f", value=bytes.fromhex('{self.value.hex()}')"
         result += ')'
         return result

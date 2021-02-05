@@ -23,7 +23,7 @@ class BufferMemory(MappableMemory):
 
     def write_data(self, address, data):
         offset = 0
-        offsets = self._get_data_offsets(address, len(data), AccessType.W)
+        offsets = self._get_data_offsets(address, len(data), AccessType.W, data)
         for seg, start, end in list(offsets): #we call list() to detect any errors before starting to write
             chunk_size = end - start
             seg._data[start : end] = data[offset : offset + chunk_size]
@@ -33,7 +33,7 @@ class BufferMemory(MappableMemory):
         offsets = self._get_data_offsets(address, size, AccessType.R)
         return b''.join(seg._data[start : end] for seg, start, end in offsets)
 
-    def _get_data_offsets(self, address, size, atype):
+    def _get_data_offsets(self, address, size, atype, avalue=None):
         #We need to deal with the case of a read/write that spans two adjacent segments
         #This function yields segment, start_offset, end_offset containing given address range
         curr_address = address
@@ -43,7 +43,7 @@ class BufferMemory(MappableMemory):
             try:
                 seg = self.segments.by_address(curr_address)
             except KeyError as e:
-                raise MemoryAccessError(Access(atype, address, size), 'unmapped')
+                raise MemoryAccessError(Access(atype, address, size, avalue), 'unmapped')
 
             start_offset = curr_address - seg.start
             end_offset = min(end_address - seg.start, seg.size)
