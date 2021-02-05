@@ -13,36 +13,18 @@ X86_REGS = RegisterSet.from_libs('x86')
 class X86Architecture(SimpleArchitecture):
     """X86-family architecture"""
 
-    def __init__(self, *,
-        name,
-        alt_names,
-        bits,
-        pc_name,
-        sp_name,
-        retval_name,
-        ks_mode,
-        cs_mode,
-        uc_mode
-    ):
-        super().__init__(
-            name=name,
-            alt_names=alt_names,
-            bits=bits,
+    def __init__(self, **kwargs):
+        kwargs.update(
             endian=Endian.LITTLE,
+            regs=X86_REGS,
             insn_alignment=1,
             min_insn_size=1,
             max_insn_size=15,
-            regs=X86_REGS,
-            pc_name=pc_name,
-            sp_name=sp_name,
-            retval_name=retval_name,
             ks_arch=keystone.KS_ARCH_X86,
-            ks_mode=ks_mode,
             cs_arch=capstone.CS_ARCH_X86,
-            cs_mode=cs_mode,
             uc_arch=unicorn.UC_ARCH_X86,
-            uc_mode=uc_mode
         )
+        super().__init__(**kwargs)
 
 
 ARCH_X86_16 = X86Architecture(

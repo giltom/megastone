@@ -14,27 +14,15 @@ CPSR_THUMB_MASK = 1 << 5
 
 
 class ARMInstructionSet(InstructionSet):
-    def __init__(self, *,
-        name: str,
-        alt_names: tuple = (),
-        min_insn_size: int,
-        ks_mode: int,
-        cs_mode: int,
-        uc_mode: int
-    ):
-        super().__init__(
-            name=name,
-            alt_names=alt_names,
-            insn_alignment=min_insn_size,
-            min_insn_size=min_insn_size,
+    def __init__(self, **kwargs):
+        kwargs.update(
+            insn_alignment=kwargs['min_insn_size'],
             max_insn_size=4,
             ks_arch=keystone.KS_ARCH_ARM,
-            ks_mode=ks_mode,
             cs_arch=capstone.CS_ARCH_ARM,
-            cs_mode=cs_mode,
             uc_arch=unicorn.UC_ARCH_ARM,
-            uc_mode=uc_mode
         )
+        super().__init__(**kwargs)
 
 
 class ThumbInstructionSet(ARMInstructionSet):
@@ -46,18 +34,13 @@ class ARMArchitecture(Architecture):
     """Base class for 32-bit ARM architectures."""
 
     def __init__(self, *,
-        name: str,
-        alt_names: tuple = (),
-        endian: Endian,
         arm_isa: InstructionSet,
-        thumb_isa: InstructionSet
+        thumb_isa: InstructionSet,
+        **kwargs
     ):
         isas = [isa for isa in [arm_isa, thumb_isa] if isa is not None]
-        super().__init__(
-            name=name,
-            alt_names=alt_names,
+        kwargs.update(
             bits=32,
-            endian=endian,
             isas=isas,
             regs=ARM_REGS,
             pc_name='pc',
@@ -65,6 +48,7 @@ class ARMArchitecture(Architecture):
             retval_name='r0',
             retaddr_name='lr'
         )
+        super().__init__(**kwargs)
         self.arm = arm_isa
         self.thumb = thumb_isa
 
