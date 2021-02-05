@@ -17,7 +17,7 @@ INITIAL_DATA = b'A' * SEG_SIZE
 @pytest.fixture
 def arch_mem(arch, isa):
     mem = BufferMemory(arch)
-    mem.isa = isa
+    mem.default_isa = isa
     mem.load(SEG_NAME, SEG_ADDRESS, INITIAL_DATA)
     return mem
 

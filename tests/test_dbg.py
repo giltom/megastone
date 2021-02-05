@@ -22,7 +22,7 @@ def get_emulator(arch, isa):
     emu = Emulator(arch)
     map_code_segment(emu, 'code', CODE_ADDRESS, isa)
     emu.mem.map('data', DATA_ADDRESS, DATA_SIZE, AccessType.RW)
-    emu.mem.isa = isa
+    emu.mem.default_isa = isa
     emu.sp = STACK_ADDRESS
     emu.jump(CODE_ADDRESS, isa)
     return emu

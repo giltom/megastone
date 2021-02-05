@@ -21,7 +21,7 @@ class Memory(abc.ABC):
 
     def __init__(self, arch: Architecture):
         self.arch = arch
-        self.isa = arch.default_isa
+        self.default_isa = arch.default_isa
         self.verbose = False
 
     @abc.abstractmethod
@@ -211,7 +211,7 @@ class Memory(abc.ABC):
 
     def _fix_isa(self, isa) -> InstructionSet:
         if isa is None:
-            return self.isa
+            return self.default_isa
         return isa
 
 
