@@ -122,7 +122,7 @@ class Emulator(Debugger):
         """
         emu = cls(exe.arch)
         emu.mem.load_memory(exe.mem)
-        emu.pc = exe.entry
+        emu.jump(exe.entry)
         return emu
 
     @staticmethod
