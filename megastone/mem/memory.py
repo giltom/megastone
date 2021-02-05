@@ -137,13 +137,22 @@ class Memory(abc.ABC):
             yield inst
             address += inst.size
 
-    def create_fileobj(self, address, size):
-        """Get a virtual file object exposing a memory range."""
+    def create_fileobj(self, address, size=None):
+        """
+        Get a virtual file object exposing a memory range.
+        
+        If `size` is not None, a file object of the given size is created.
+        The file will return EOF after `size` bytes are read.
+        If `size` is None, a "stream" file with unlimited size is created.
+        Calling read() with no arguments isn't supported.
+        """
+        if size is None:
+            return StreamMemoryIO(self, address)
         return MemoryIO(self, address, size)
 
     def write_fileobj(self, address, fileobj):
         """Write data from the file object to the given address."""
-        dest = self.create_fileobj(address, 0)
+        dest = self.create_fileobj(address)
         shutil.copyfileobj(fileobj, dest)
 
     def write_file(self, address, path):
@@ -215,13 +224,13 @@ class Memory(abc.ABC):
         return isa
 
 
-class MemoryIO(io.RawIOBase):
-    """RawIOBase implementation that exposes a specific memory region as a file object."""
 
-    def __init__(self, mem : Memory, start, size):
+class BaseMemoryIO(io.RawIOBase):
+    """Base class for Memory-based file objects."""
+
+    def __init__(self, mem : Memory, start):
         self._mem = mem
         self._start = start
-        self._size = size
         self._offset = 0
 
     def seekable(self):
@@ -230,19 +239,55 @@ class MemoryIO(io.RawIOBase):
     def tell(self):
         return self._offset
 
-    def seek(self, offset, whence=io.SEEK_SET):
+    def _get_seek_offset(self, offset, whence):
         if whence == io.SEEK_SET:
-            new_offset = offset
-        elif whence == io.SEEK_CUR:
-            new_offset = self._offset + offset
-        elif whence == io.SEEK_END:
+            return offset
+        if whence == io.SEEK_CUR:
+            return self._offset + offset
+        raise ValueError('Invalid seek type')
+
+    def _set_offset(self, offset):
+        if offset < 0:
+            raise ValueError('Invalid seek offset')
+        self._offset = offset
+
+    def _read(self, size):
+        data = self._mem.read(self._start + self._offset, size)
+        self._offset += size
+        return data
+
+    def _write(self, data):
+        self._mem.write(self._start + self._offset, data)
+        self._offset += len(data)
+        return len(data)
+
+
+class StreamMemoryIO(BaseMemoryIO):
+    """RawIOBase implementation that exposes memory as a stream-like file object with unlimited size."""
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        self._set_offset(self._get_seek_offset(offset, whence))
+    
+    def read(self, size):
+        return self._read(size)
+
+    def write(self, data):
+        return self._write(data)
+
+
+class MemoryIO(BaseMemoryIO):
+    """RawIOBase implementation that exposes a specific memory region as a file object."""
+
+    def __init__(self, mem : Memory, start, size):
+        super().__init__(mem, start)
+        self._size = size
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        if whence == io.SEEK_END:
             new_offset = self._size + offset
         else:
-            raise ValueError('Invalid seek type')
-
-        if new_offset < 0:
-            raise ValueError('Invalid seek offset')
-        self._offset = new_offset
+            new_offset = self._get_seek_offset(offset, whence)
+        self._set_offset(new_offset)
 
     def truncate(self, size=None):
         if size is None:
@@ -256,17 +301,14 @@ class MemoryIO(io.RawIOBase):
         if size == -1 or self._offset + size > self._size:
             size = self._size - self._offset
 
-        data = self._mem.read(self._start + self._offset, size)
-        self._offset += size
-        return data
+        return self._read(size)
     
-    def write(self, b):
-        end_offset = self._offset + len(b)
+    def write(self, data):
+        end_offset = self._offset + len(data)
         if end_offset > self._size:
             self._size = end_offset
 
-        self._mem.write(self._start + self._offset, b)
-        self._offset = end_offset
+        return self._write(data)
 
     def get_data(self):
         """Return the entire data covered by the file"""

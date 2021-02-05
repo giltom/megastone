@@ -217,3 +217,12 @@ def test_dump(mem: Memory, temp_file):
 def test_load_file(mem: MappableMemory, temp_file):
     mem.load_file('seg2', 0x2000, temp_file.name)
     assert mem.segments.seg2.read() == TEMP_FILE_DATA
+
+def test_stream(mem: Memory):
+    size = 5
+    fileobj = mem.create_fileobj(SEG_ADDRESS)
+    assert fileobj.read(size) == INITIAL_DATA[:size]
+
+    offset = 2
+    fileobj.seek(offset)
+    assert fileobj.tell() == offset
