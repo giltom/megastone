@@ -93,7 +93,7 @@ class Emulator(Debugger):
     PAGE_SIZE = 0x1000
 
     def __init__(self, arch: Architecture):
-        uc = arch.isa.create_uc()
+        uc = arch.create_uc()
         super().__init__(UnicornMemory(arch, uc))
 
         self._uc = uc

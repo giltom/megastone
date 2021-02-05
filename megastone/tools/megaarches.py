@@ -18,10 +18,10 @@ def main():
     print('Supported:\n')
     for arch in Architecture.all():
         print(f'{arch.name} {alt_list(arch.alt_names)}')
-        print(f'    bits: {arch.bits}  endian: {arch.endian.name.lower()}  registers: {yes_no(arch.regs is not None)}')
+        print(f'    bits: {arch.bits}  endian: {arch.endian.name.lower()}  UC: {yes_no(arch.uc_supported)}')
         print(f'    instruction sets:')
         for isa in arch.isas:
-            print(f'        {isa.name} {alt_list(isa.alt_names)}:  KS: {yes_no(isa.ks_supported)}  CS: {yes_no(isa.cs_supported)}  UC: {yes_no(isa.uc_supported)}')
+            print(f'        {isa.name} {alt_list(isa.alt_names)}:  KS: {yes_no(isa.ks_supported)}  CS: {yes_no(isa.cs_supported)}')
         print()
 
 

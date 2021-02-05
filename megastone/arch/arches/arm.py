@@ -19,8 +19,7 @@ class ARMInstructionSet(InstructionSet):
             insn_alignment=kwargs['min_insn_size'],
             max_insn_size=4,
             ks_arch=keystone.KS_ARCH_ARM,
-            cs_arch=capstone.CS_ARCH_ARM,
-            uc_arch=unicorn.UC_ARCH_ARM,
+            cs_arch=capstone.CS_ARCH_ARM
         )
         super().__init__(**kwargs)
 
@@ -46,7 +45,9 @@ class ARMArchitecture(Architecture):
             pc_name='pc',
             sp_name='sp',
             retval_name='r0',
-            retaddr_name='lr'
+            retaddr_name='lr',
+            uc_arch=unicorn.UC_ARCH_ARM,
+            uc_mode=unicorn.UC_MODE_ARM | unicorn.UC_MODE_LITTLE_ENDIAN
         )
         super().__init__(**kwargs)
         self.arm = arm_isa
@@ -78,16 +79,14 @@ ISA_ARM = ARMInstructionSet(
     alt_names=['arm32', 'armle'],
     min_insn_size=4,
     ks_mode=keystone.KS_MODE_ARM | keystone.KS_MODE_LITTLE_ENDIAN,
-    cs_mode=capstone.CS_MODE_ARM | capstone.CS_MODE_LITTLE_ENDIAN,
-    uc_mode=unicorn.UC_MODE_ARM | unicorn.UC_MODE_LITTLE_ENDIAN
+    cs_mode=capstone.CS_MODE_ARM | capstone.CS_MODE_LITTLE_ENDIAN
 )
 
 ISA_THUMB = ThumbInstructionSet(
     name='thumb',
     min_insn_size=2,
     ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,
-    cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN,
-    uc_mode=unicorn.UC_MODE_THUMB | unicorn.UC_MODE_LITTLE_ENDIAN
+    cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN
 )
 
 ARCH_ARM = ARMArchitecture(

@@ -1,6 +1,8 @@
 import enum
 import platform
 
+import unicorn
+
 from megastone.db import DatabaseEntry
 from megastone.util import bits_to_mask, size_to_mask
 from .isa import InstructionSet
@@ -52,7 +54,9 @@ class Architecture(DatabaseEntry):
         pc_name: str = None,                 #Program counter register
         sp_name: str = None,                 #Stack pointer register
         retaddr_name: str = None,            #Name of register containing return address (if None, retaddr is stored on the stack)
-        retval_name: str = None              #Name of register containing return value
+        retval_name: str = None,        #Name of register containing return value
+        uc_arch: int = None,            #Unicorn arch ID, None if unicorn isn't supported
+        uc_mode: int = 0,               #Unicorn mode ID
     ):
         super().__init__(name, alt_names)
         self.bits = bits
@@ -64,6 +68,8 @@ class Architecture(DatabaseEntry):
         self.sp_reg = regs[sp_name] if sp_name is not None else None
         self.retaddr_reg = regs[retaddr_name] if retaddr_name is not None else None
         self.retval_reg = regs[retval_name] if retval_name is not None else None
+        self.uc_arch = uc_arch
+        self.uc_mode = uc_mode
 
     @staticmethod
     def native():
@@ -78,6 +84,18 @@ class Architecture(DatabaseEntry):
     @property
     def word_mask(self):
         return bits_to_mask(self.bits)
+
+    @property
+    def uc_supported(self):
+        return self.uc_arch is not None
+
+    @property
+    def fully_supported(self):
+        return self.uc_supported and all(isa.ks_supported and isa.cs_supported for isa in self.isas)
+
+    def create_uc(self):
+        """Create and return a Unicorn Uc object for this architecture"""
+        return unicorn.Uc(self.uc_arch, self.uc_mode)
     
     def assemble(self, assembly, address=0):
         """Assemble with the default ISA. See InstructionSet.assemble()."""
@@ -156,9 +174,7 @@ class SimpleArchitecture(Architecture):
             ks_arch=ks_arch,
             ks_mode=ks_mode,
             cs_arch=cs_arch,
-            cs_mode=cs_mode,
-            uc_arch=uc_arch,
-            uc_mode=uc_mode
+            cs_mode=cs_mode
         )
 
         return super().__init__(
@@ -171,5 +187,7 @@ class SimpleArchitecture(Architecture):
             pc_name=pc_name,
             sp_name=sp_name,
             retaddr_name=retaddr_name,
-            retval_name=retval_name
+            retval_name=retval_name,
+            uc_arch=uc_arch,
+            uc_mode=uc_mode
         )

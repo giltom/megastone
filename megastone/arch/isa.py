@@ -1,6 +1,5 @@
 import keystone
 import capstone
-import unicorn
 
 from megastone.db import DatabaseEntry
 from megastone.errors import MegastoneError
@@ -30,9 +29,7 @@ class InstructionSet(DatabaseEntry):
         ks_arch: int = None,     #Keystone arch ID, None if keystone isn't supported
         ks_mode: int = 0,        #Keystone mode ID
         cs_arch: int = None,     #Capstone arch ID, None if capstone isn't supported
-        cs_mode: int = 0,        #Capstone mode ID
-        uc_arch: int = None,     #Unicorn arch ID, None if unicorn isn't supported
-        uc_mode: int = 0,        #Unicorn mode ID
+        cs_mode: int = 0        #Capstone mode ID
     ):
         super().__init__(name, alt_names)
         self.insn_alignment = insn_alignment
@@ -42,8 +39,6 @@ class InstructionSet(DatabaseEntry):
         self.ks_mode = ks_mode
         self.cs_arch = cs_arch
         self.cs_mode = cs_mode
-        self.uc_arch = uc_arch
-        self.uc_mode = uc_mode
 
         self._ks = None
         if self.ks_supported:
@@ -60,14 +55,6 @@ class InstructionSet(DatabaseEntry):
     @property
     def cs_supported(self):
         return self.cs_arch is not None
-    
-    @property
-    def uc_supported(self):
-        return self.uc_arch is not None
-
-    @property
-    def fully_supported(self):
-        return self.ks_supported and self.cs_supported and self.uc_supported
 
     def assemble(self, assembly, address=0):
         """
@@ -107,10 +94,6 @@ class InstructionSet(DatabaseEntry):
         if len(result) == 0:
             raise DisassemblyError('Invalid instruction')
         return result[0]
-
-    def create_uc(self):
-        """Create and return a Unicorn Uc object for this architecture"""
-        return unicorn.Uc(self.uc_arch, self.uc_mode)
 
     def address_to_pointer(self, address):
         """Convert a code address to a pointer (relevant for thumb)."""

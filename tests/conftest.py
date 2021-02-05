@@ -15,7 +15,7 @@ def get_id(arch_isa):
     return arch.name
 
 
-@pytest.fixture(params=[(arch, isa) for arch in Architecture.all() for isa in arch.isas if isa.fully_supported], ids=get_id)
+@pytest.fixture(params=[(arch, isa) for arch in Architecture.all() for isa in arch.isas if arch.fully_supported], ids=get_id)
 def arch_isa(request):
     return request.param
 
