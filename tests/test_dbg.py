@@ -1,7 +1,9 @@
 from megastone.debug.errors import CPUError
 import pytest
 
-from megastone import Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE, StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, MemoryAccessError, FaultCause
+from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
+    StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, MemoryAccessError, FaultCause,
+    ARCH_X86)
 
 
 CODE_ADDRESS = 0x1000
@@ -10,6 +12,8 @@ CODE_SIZE = 0x1000
 CODE2_ADDRESS = 0x2000
 DATA_ADDRESS = 0x3000
 DATA_SIZE = 0x1000
+STACK_ADDRESS = DATA_SIZE + DATA_SIZE - 0x20
+FUNC_ADDRESS = CODE_ADDRESS + 0x100
 
 THUMB_NOP = ARCH_ARM.thumb.assemble('nop')
 ARM_NOP = ARCH_ARM.arm.assemble('nop')
@@ -19,6 +23,7 @@ def get_emulator(arch, isa):
     map_code_segment(emu, 'code', CODE_ADDRESS, isa)
     emu.mem.map('data', DATA_ADDRESS, DATA_SIZE, AccessType.RW)
     emu.mem.isa = isa
+    emu.sp = STACK_ADDRESS
     emu.jump(CODE_ADDRESS, isa)
     return emu
 
@@ -228,3 +233,86 @@ def test_mem_fault(dbg):
     assert info.value.access.size == 4
     assert info.value.access.value == value
     assert info.value.address == CODE_ADDRESS + 8
+
+def test_stack_read(arch_dbg, arch):
+    arch_dbg.mem.write_word(STACK_ADDRESS, 0xDEAD)
+    arch_dbg.mem.write_word(STACK_ADDRESS + arch.word_size, 0xBEEF)
+    
+    assert arch_dbg.stack[0] == 0xDEAD
+    assert arch_dbg.stack[1] == 0xBEEF
+    assert arch_dbg.stack[:2] == [0xDEAD, 0xBEEF]
+
+def test_stack_write(arch_dbg, arch):
+    arch_dbg.stack[0] = 0xDEAD
+    arch_dbg.stack[1] = 0xBEEF
+
+    assert arch_dbg.mem.read_word(STACK_ADDRESS) == 0xDEAD
+    assert arch_dbg.mem.read_word(STACK_ADDRESS + arch.word_size) == 0xBEEF
+
+def test_stack_push(arch_dbg, arch):
+    arch_dbg.mem.write_word(STACK_ADDRESS, 0xDEAD)
+
+    arch_dbg.stack.push(0xBEEF)
+    assert arch_dbg.sp == STACK_ADDRESS - arch.word_size
+    assert arch_dbg.stack[0] == 0xBEEF
+    assert arch_dbg.stack[1] == 0xDEAD
+
+def test_stack_pop(arch_dbg, arch):
+    arch_dbg.mem.write_word(STACK_ADDRESS, 0xDEAD)
+
+    assert arch_dbg.stack.pop() == 0xDEAD
+    assert arch_dbg.sp == STACK_ADDRESS + arch.word_size
+
+def arm_replacement_func(dbg):
+    return dbg.regs.r0 + dbg.regs.r1
+
+def test_replace_func_arm(armthumb_dbg: Debugger, arm_isa, other_arm_isa):
+    armthumb_dbg.mem.write_code(CODE_ADDRESS, f"""
+        MOV R0, #3
+        MOV R1, #4
+        BLX 0x{other_arm_isa.address_to_pointer(CODE2_ADDRESS):X}
+        MOV R4, R0
+        {'nop;'*30}
+    """)
+
+    armthumb_dbg.mem.write_code(CODE2_ADDRESS, f"""
+        MOV R0, 15
+        BX LR
+    """, isa=other_arm_isa)
+
+    armthumb_dbg.add_breakpoint(CODE_ADDRESS + 0x20)
+
+    armthumb_dbg.run()
+    assert armthumb_dbg.regs.r4 == 15
+
+    armthumb_dbg.replace_function(CODE2_ADDRESS, arm_replacement_func)
+    armthumb_dbg.run(address=CODE_ADDRESS, isa=arm_isa)
+    assert armthumb_dbg.regs.r4 == 7
+
+def x86_replacement_func(dbg):
+    return dbg.stack[1] + dbg.stack[2]
+
+def test_replace_x86_func():
+    dbg = get_emulator(ARCH_X86, ARCH_X86.isa)
+
+    dbg.mem.write_code(CODE_ADDRESS, f"""
+        push 15
+        push 3
+        call 0x{FUNC_ADDRESS:X}
+        mov ebx, eax
+        {'nop;'*30}
+    """)
+
+    dbg.mem.write_code(FUNC_ADDRESS, f"""
+        mov eax, 10
+        ret
+    """)
+
+    dbg.add_breakpoint(CODE_ADDRESS + 0x20)
+
+    dbg.run()
+    assert dbg.regs.ebx == 10
+
+    dbg.replace_function(FUNC_ADDRESS, x86_replacement_func)
+    dbg.run(address=CODE_ADDRESS)
+    assert dbg.regs.ebx == 18

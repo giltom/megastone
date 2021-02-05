@@ -84,9 +84,6 @@ class UnicornMemory(MappableMemory):
         except unicorn.UcError as e:
             raise MemoryAccessError(Access(AccessType.R, address, size), str(e))
 
-    def _handle_uc_error(e: unicorn.UcError):
-        atype = UC_ACCESS_TO_ACCESS_TYPE[e]
-
 
 class Emulator(Debugger):
     """Emulator based on the Unicorn engine. Implements the full Debugger interface."""
