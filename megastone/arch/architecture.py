@@ -49,10 +49,10 @@ class Architecture(DatabaseEntry):
         endian: Endian,
         isas: tuple,                             #List of instruction sets. The first one will be the default. Most arches have only one.
         regs: RegisterSet = None,                #Register set (can be None if disassembly and emulation aren't supported)
-        pc_reg: Register = None,                 #Program counter register
-        sp_reg: Register = None,                 #Stack pointer register
-        retaddr_reg: Register = None,            #Name of register containing return address (if None, retaddr is stored on the stack)
-        retval_reg: Register = None              #Name of register containing return value
+        pc_name: str = None,                 #Program counter register
+        sp_name: str = None,                 #Stack pointer register
+        retaddr_name: str = None,            #Name of register containing return address (if None, retaddr is stored on the stack)
+        retval_name: str = None              #Name of register containing return value
     ):
         super().__init__(name, alt_names)
         self.bits = bits
@@ -60,10 +60,10 @@ class Architecture(DatabaseEntry):
         self.endian = endian
         self.isas = tuple(isas)
         self.regs = regs
-        self.pc_reg = pc_reg
-        self.sp_reg = sp_reg
-        self.retaddr_reg = retaddr_reg
-        self.retval_reg = retval_reg
+        self.pc_reg = regs[pc_name] if pc_name is not None else None
+        self.sp_reg = regs[sp_name] if sp_name is not None else None
+        self.retaddr_reg = regs[retaddr_name] if retaddr_name is not None else None
+        self.retval_reg = regs[retval_name] if retval_name is not None else None
 
     @staticmethod
     def native():
@@ -133,10 +133,10 @@ class SimpleArchitecture(Architecture):
         bits: int,
         endian: Endian,
         regs: RegisterSet = None, 
-        pc_reg: Register = None,      
-        sp_reg: Register = None,        
-        retaddr_reg: Register = None,          
-        retval_reg: Register = None,            
+        pc_name: Register = None,      
+        sp_name: Register = None,        
+        retaddr_name: Register = None,          
+        retval_name: Register = None,            
         insn_alignment: int,  
         min_insn_size: int,    
         max_insn_size: int,    
@@ -168,8 +168,8 @@ class SimpleArchitecture(Architecture):
             endian=endian,
             isas=[isa],
             regs=regs,
-            pc_reg=pc_reg,
-            sp_reg=sp_reg,
-            retaddr_reg=retaddr_reg,
-            retval_reg=retval_reg
+            pc_name=pc_name,
+            sp_name=sp_name,
+            retaddr_name=retaddr_name,
+            retval_name=retval_name
         )

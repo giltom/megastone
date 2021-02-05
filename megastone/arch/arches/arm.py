@@ -60,10 +60,10 @@ class ARMArchitecture(Architecture):
             endian=endian,
             isas=isas,
             regs=ARM_REGS,
-            pc_reg=ARM_REGS.pc,
-            sp_reg=ARM_REGS.sp,
-            retval_reg=ARM_REGS.r0,
-            retaddr_reg=ARM_REGS.lr
+            pc_name='pc',
+            sp_name='sp',
+            retval_name='r0',
+            retaddr_name='lr'
         )
         self.arm = arm_isa
         self.thumb = thumb_isa
