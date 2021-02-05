@@ -35,7 +35,7 @@ def test_invalid_asm(isa):
 
 def test_invalid_disasm(isa):
     with pytest.raises(DisassemblyError):
-        isa.disassemble_one(b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF')
+        isa.disassemble_one(b'\x66')
 
 def test_reg_names(arch):
     assert arch.regs.has_reg_name(arch.pc_reg.name)
