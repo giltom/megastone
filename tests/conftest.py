@@ -2,7 +2,7 @@ import tempfile
 
 import pytest
 
-from megastone import Architecture, ARCH_ARM, assemble
+from megastone import Architecture, ARCH_ARM
 
 
 TEMP_FILE_DATA = b'F' * 0x1000
@@ -32,7 +32,7 @@ def isa(arch_isa):
 
 @pytest.fixture
 def nop(isa):
-    return assemble(isa, 'nop')
+    return isa.assemble('nop')
 
 
 @pytest.fixture(params=ARCH_ARM.isas)

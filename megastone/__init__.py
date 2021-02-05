@@ -1,5 +1,4 @@
 from .arch import *
-from .assembler import Assembler, assemble
 from .mem import *
 from .files import *
 from .debug import *

@@ -3,7 +3,7 @@ import pytest
 
 from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
     StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, Access, FaultCause,
-    ARCH_X86, assemble, ISA_THUMB, ISA_ARM)
+    ARCH_X86)
 
 
 CODE_ADDRESS = 0x1000
@@ -15,8 +15,8 @@ DATA_SIZE = 0x1000
 STACK_ADDRESS = DATA_SIZE + DATA_SIZE - 0x20
 FUNC_ADDRESS = CODE_ADDRESS + 0x100
 
-THUMB_NOP = assemble(ISA_THUMB, 'nop')
-ARM_NOP = assemble(ISA_ARM, 'nop')
+THUMB_NOP = ARCH_ARM.thumb.assemble('nop')
+ARM_NOP = ARCH_ARM.arm.assemble('nop')
 
 def get_emulator(arch, isa):
     emu = Emulator(arch)
@@ -29,7 +29,7 @@ def get_emulator(arch, isa):
 
 def map_code_segment(emu, name, address, isa):
     emu.mem.map(name, address, CODE_SIZE)
-    nop = assemble(isa, 'nop')
+    nop = isa.assemble('nop')
     emu.mem.write(address, nop * (CODE_SIZE // len(nop)))
 
 @pytest.fixture
@@ -70,13 +70,13 @@ def test_thumb_switch(armthumb_dbg, other_arm_isa):
 
     armthumb_dbg.step()
     armthumb_dbg.run(count, address=CODE2_ADDRESS, isa=other_arm_isa)
-    assert armthumb_dbg.pc == CODE2_ADDRESS + count * len(assemble(other_arm_isa, 'nop'))
+    assert armthumb_dbg.pc == CODE2_ADDRESS + count * len(other_arm_isa.assemble('nop'))
 
 def test_thumb_address_switch(armthumb_dbg, other_arm_isa):
     armthumb_dbg.run(14)
     armthumb_dbg.jump(other_arm_isa.address_to_pointer(CODE2_ADDRESS))
     armthumb_dbg.step()
-    assert armthumb_dbg.pc == CODE2_ADDRESS + len(assemble(other_arm_isa, 'nop'))
+    assert armthumb_dbg.pc == CODE2_ADDRESS + len(other_arm_isa.assemble('nop'))
 
 def test_stop_hook(arch_dbg: Debugger, nop):
     hook_addr = CODE_ADDRESS + 10 * len(nop)

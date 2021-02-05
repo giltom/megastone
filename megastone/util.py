@@ -42,26 +42,3 @@ class FlagConstant:
 
     def __repr__(self):
         return self.name
-
-class ExceptionSaver:
-    """Helper class used to store raised exceptions and raise them later."""
-
-    def __init__(self):
-        self._exception = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self._exception = exc_value
-        self.handle_exception(exc_value)
-        return True #suppress the exception
-
-    def check(self):
-        exception = self._exception
-        self._exception = None
-        if exception is not None:
-            raise exception
-
-    def handle_exception(self, e):
-        pass #hook for subclasses

@@ -6,10 +6,6 @@ class MegastoneError(Exception):
     """Base class for all custom exceptions."""
     pass
 
-class UnsupportedError(MegastoneError):
-    """Exception for unsupported features."""
-    pass
-
 class MegastoneWarning(Warning):
     """Base class for all custom warnings."""
     pass

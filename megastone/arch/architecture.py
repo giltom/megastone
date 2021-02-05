@@ -78,6 +78,10 @@ class Architecture(DatabaseEntry):
     @property
     def word_mask(self):
         return bits_to_mask(self.bits)
+    
+    def assemble(self, assembly, address=0):
+        """Assemble with the default ISA. See InstructionSet.assemble()."""
+        return self.isa.assemble(assembly, address)
 
     def disassemble(self, code, address=0, *, count=0):
         """Disassemble with the default ISA. See InstructionSet.disassemble()."""
