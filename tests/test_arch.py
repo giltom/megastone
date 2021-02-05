@@ -17,19 +17,8 @@ def test_disasm(isa, nop):
     insns = list(isa.disassemble(nop))
     assert insns[0].mnemonic.lower() == 'nop'
 
-
 def test_neg_word(arch):
     assert arch.encode_word(-1) == b'\xFF' * arch.word_size
-
-
-def test_arch_disasm(arch):
-    nop = arch.assemble('nop')
-    insns = list(arch.disassemble(nop))
-    assert insns[0].mnemonic.lower() == 'nop'
-
-def test_arch_disasm_one(arch):
-    nop = arch.assemble('nop')
-    assert arch.disassemble_one(nop).mnemonic.lower() == 'nop'
 
 def test_decode_word(arch):
     assert arch.decode_word(b'\xFF' * arch.word_size, signed=True) == -1

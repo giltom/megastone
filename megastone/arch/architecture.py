@@ -97,18 +97,6 @@ class Architecture(DatabaseEntry):
         """Create and return a Unicorn Uc object for this architecture"""
         return unicorn.Uc(self.uc_arch, self.uc_mode)
     
-    def assemble(self, assembly, address=0):
-        """Assemble with the default ISA. See InstructionSet.assemble()."""
-        return self.isa.assemble(assembly, address)
-
-    def disassemble(self, code, address=0, *, count=0):
-        """Disassemble with the default ISA. See InstructionSet.disassemble()."""
-        return self.isa.disassemble(code, address, count=count)
-
-    def disassemble_one(self, code, address=0):
-        """Disassemble one instruction with the default ISA. See InstructionSet.disassemble_one()."""
-        return self.isa.disassemble_one(code, address)
-    
     def encode_word(self, value):
         """Convert an int to bytes representing a word in this architecture"""
         return self.endian.encode_int(value, self.word_size)
