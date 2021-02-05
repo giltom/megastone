@@ -1,7 +1,7 @@
 import pytest
 
 
-from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile
+from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile, MegastoneError, ExecFile
 
 
 
@@ -47,3 +47,7 @@ def test_auto_default():
         f = FORMAT_AUTO.parse_bytes(BIN_DATA, arch=ARCH_ARM)
 
     assert isinstance(f, BinaryFile)
+
+def test_lock(execfile: ExecFile):
+    with pytest.raises(MegastoneError):
+        execfile.mem.map('test', 0x6000, 0x1000)

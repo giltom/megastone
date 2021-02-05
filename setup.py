@@ -25,7 +25,8 @@ setuptools.setup(
     install_requires=[
         'keystone-engine',
         'capstone',
-        'unicorn'
+        'unicorn',
+        'pyelftools'
     ],
     classifiers=[
         'Programming Language :: Python :: 3',

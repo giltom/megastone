@@ -473,6 +473,7 @@ class MappableMemory(SegmentMemory):
 
     def __init__(self, arch: Architecture):
         super().__init__(arch)
+        self.locked = False
         self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
 
     @abc.abstractmethod
@@ -519,6 +520,9 @@ class MappableMemory(SegmentMemory):
 
     def _add_segment(self, seg):
         #Call in a subclass to initialize segments
+        if self.locked:
+            raise MegastoneError(f'Can\'t map more segments to this Memory; copy it with load_memory()')
+
         if seg.name in self._segments:
             raise MegastoneError(f'Segment with name "{seg.name}" already exists')
 
@@ -528,3 +532,7 @@ class MappableMemory(SegmentMemory):
 
         self._segments[seg.name] = seg
         return seg
+
+    def lock(self):
+        """Lock the memory so no new Segments can be mapped."""
+        self.locked = True
