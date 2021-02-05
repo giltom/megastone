@@ -1,13 +1,16 @@
+from megastone.mem.memory import MappableMemory
 import pytest
 import io
 
 
 from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError
 
+from .conftest import TEMP_FILE_DATA
+
 
 SEG_NAME = 'seg'
 SEG_ADDRESS = 0x1000
-SEG_SIZE = 0x40
+SEG_SIZE = len(TEMP_FILE_DATA)
 INITIAL_DATA = b'A' * SEG_SIZE
 
 
@@ -202,3 +205,15 @@ def test_dump_to_fileobj(mem: Memory):
     fileobj = io.BytesIO()
     mem.segments.seg.dump_to_fileobj(fileobj)
     assert fileobj.getvalue() == INITIAL_DATA
+
+def test_write_file(mem: Memory, temp_file):
+    mem.segments.seg.write_file(temp_file.name)
+    assert mem.segments.seg.read() == TEMP_FILE_DATA
+
+def test_dump(mem: Memory, temp_file):
+    mem.segments.seg.dump_to_file(temp_file.name)
+    assert temp_file.read() == INITIAL_DATA
+
+def test_load_file(mem: MappableMemory, temp_file):
+    mem.load_file('seg2', 0x2000, temp_file.name)
+    assert mem.segments.seg2.read() == TEMP_FILE_DATA

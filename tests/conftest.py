@@ -1,6 +1,11 @@
+import tempfile
+
 import pytest
 
 from megastone import Architecture, ARCH_ARM
+
+
+TEMP_FILE_DATA = b'F' * 0x1000
 
 
 def get_id(arch_isa):
@@ -39,3 +44,10 @@ def other_arm_isa(arm_isa):
     if arm_isa is ARCH_ARM.arm:
         return ARCH_ARM.thumb
     return ARCH_ARM.arm
+
+@pytest.fixture
+def temp_file():
+    with tempfile.NamedTemporaryFile(buffering=0) as temp_file:
+        temp_file.write(TEMP_FILE_DATA)
+        temp_file.seek(0)
+        yield temp_file
