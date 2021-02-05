@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import sys
 
 import unicorn
 
@@ -193,8 +194,8 @@ class Emulator(Debugger):
     def _catch_hook_exceptions(self):
         try:
             yield
-        except Exception as e:
-            self._hook_exception = e
+        except:
+            self._hook_exception = sys.exc_info()[0]
             self._uc.emu_stop()
 
     def _code_hook(self, uc, address, size, hook: Hook):
