@@ -3,6 +3,16 @@ import capstone
 import unicorn
 
 from megastone.db import DatabaseEntry
+from megastone.errors import MegastoneError
+
+
+class AssemblyError(MegastoneError):
+    pass
+
+
+class DisassemblyError(MegastoneError):
+    pass
+
 
 class InstructionSet(DatabaseEntry):
     """
@@ -35,14 +45,13 @@ class InstructionSet(DatabaseEntry):
         self.uc_arch = uc_arch
         self.uc_mode = uc_mode
 
-        self.ks = None
+        self._ks = None
         if self.ks_supported:
-            self.ks = keystone.Ks(self.ks_arch, self.ks_mode)
+            self._ks = keystone.Ks(self.ks_arch, self.ks_mode)
         
-        self.uc = None
         if self.cs_supported:
-            self.cs = capstone.Cs(self.cs_arch, self.cs_mode)
-            self.cs.detail = True
+            self._cs = capstone.Cs(self.cs_arch, self.cs_mode)
+            self._cs.detail = True
 
     @property
     def ks_supported(self):
@@ -65,26 +74,38 @@ class InstructionSet(DatabaseEntry):
         Assemble the given instructions and return the assembled bytes.
 
         `address`, if given, is the base address of the instructions.
+        Raise an `AssemblyError` if the assembly is invalid.
         """
-        data, _ = self.ks.asm(assembly, addr=address, as_bytes=True)
+        try:
+            data, _ = self._ks.asm(assembly, addr=address, as_bytes=True)
+        except keystone.KsError as e:
+            raise AssemblyError(f'Assembly failed: {str(e)}') from e
         if data is None:
-            raise ValueError('Invalid assembly')
+            raise AssemblyError('Invalid assembly')
         return data
 
     def disassemble(self, code, address=0, *, count=0):
         """
         Disassemble the given machine code and yield assembly instructions.
+        Assembly will stop at an invalid instruction.
 
         `address` - The base address of the code.
-        `count` - Maximum number of instructions to disassemble (if not given - unlimited)
+        `count` - Maximum number of instructions to disassemble (if not given - unlimited).
         """
-        yield from self.cs.disasm(code, offset=address, count=count)
+        try:
+            yield from self._cs.disasm(code, offset=address, count=count)
+        except capstone.CsError as e:
+            raise DisassemblyError(f'Failed to disassemble: {str(e)}') from e
 
     def disassemble_one(self, code, address=0):
-        """Disassemble and return the first instruction in the given code."""
+        """
+        Disassemble and return the first instruction in the given code.
+        
+        Raise a `DisassemblyError` if the instruction is invalid.
+        """
         result = list(self.disassemble(code, address=address, count=1))
         if len(result) == 0:
-            raise ValueError('Invalid instruction')
+            raise DisassemblyError('Invalid instruction')
         return result[0]
 
     def create_uc(self):

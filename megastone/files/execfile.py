@@ -1,4 +1,5 @@
 import io
+from megastone.errors import UnsupportedError
 from pathlib import Path
 
 
@@ -21,7 +22,7 @@ class ExecFile:
 
     def build_fileobj(self, fileobj):
         """Write the patched file to a file object. Not supported by all implementations."""
-        raise NotImplementedError()
+        raise UnsupportedError('Building is not supported for this format')
 
     def build_file(self, path):
         """Write the patches file to the given path. Not supported by all implementations."""

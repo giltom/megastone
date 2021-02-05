@@ -27,7 +27,7 @@ class Memory(abc.ABC):
     @abc.abstractmethod
     def write_data(self, address, data):
         """
-        Write bytes at the given address. Raise NotImplemented if the memory is read-only.
+        Write bytes at the given address.
         
         Override in a subclass - don't call this directly.
         """

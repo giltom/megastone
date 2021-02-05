@@ -1,7 +1,7 @@
 import platform
 import pytest
 
-from megastone import Architecture, ARCH_ARM
+from megastone import Architecture, ARCH_ARM, AssemblyError, DisassemblyError
 
 
 def test_native():
@@ -40,13 +40,12 @@ def test_all_names():
 def test_repr():
     assert 'Architecture' in repr(ARCH_ARM)
 
-@pytest.mark.skip('need to fix exceptions')
 def test_invalid_asm(isa):
-    with pytest.raises(ValueError):
+    with pytest.raises(AssemblyError):
         isa.assemble('asdklfhaskldfh')
 
 def test_invalid_disasm(isa):
-    with pytest.raises(ValueError):
+    with pytest.raises(DisassemblyError):
         isa.disassemble_one(b'\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF')
 
 def test_reg_names(arch):

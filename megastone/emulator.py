@@ -6,7 +6,7 @@ from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsn
 from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError
 from megastone.arch import Architecture, Register
 from megastone.util import round_up
-from megastone.errors import warning, MegastoneError
+from megastone.errors import warning, MegastoneError, UnsupportedError
 from megastone.files import ExecFile
 
 
@@ -168,7 +168,7 @@ class Emulator(Debugger):
     def _add_hook(self, hook: Hook):
         uc_type = ACCESS_TYPE_TO_UC_HOOK.get(hook.type, None)
         if uc_type is None:
-            raise NotImplementedError(f'Hook type {hook.type} not supported by unicorn')
+            raise UnsupportedError(f'Hook type {hook.type} is not supported by unicorn')
 
         if hook.type is AccessType.X:
             callback = self._code_hook
