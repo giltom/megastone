@@ -159,6 +159,11 @@ def test_trace(arch_dbg, counter_hook):
     arch_dbg.run(count)
     assert counter_hook.count == count + 1
 
+def test_run_until(arch_dbg, nop):
+    stop_address = CODE_ADDRESS + len(nop)*15
+    arch_dbg.run_until(stop_address)
+    assert arch_dbg.pc == stop_address
+
 class AccessHookFunc(CounterHookFunc):
     def __init__(self):
         super().__init__()

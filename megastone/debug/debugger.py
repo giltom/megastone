@@ -4,8 +4,8 @@ import enum
 
 from megastone.mem import Memory, Access, AccessType
 from megastone.arch import Register, BaseRegisterState, InstructionSet
-from megastone.util import NamespaceMapping, FlagConstant
-from .hooks import Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
+from megastone.util import FlagConstant
+from .hooks import HOOK_STOP_ONCE, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
 
 
 
@@ -142,6 +142,11 @@ class Debugger(abc.ABC):
         """Add a HOOK_BREAK at the given address."""
         return self.add_code_hook(HOOK_BREAK, address)
 
+    def run_until(self, stop_address, *, start_address=None, isa=None):
+        """Run until reaching stop_address, optionally from start_address/isa."""
+        self.add_code_hook(HOOK_STOP_ONCE, stop_address)
+        self.run(address=start_address, isa=isa)
+        
     @abc.abstractmethod
     def _add_hook(self, hook: Hook):
         #Internal hooking implementation.
