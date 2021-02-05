@@ -78,7 +78,14 @@ class Architecture(DatabaseEntry):
 
     @property
     def isa(self) -> InstructionSet:
-        """The Architecture's default ISA."""
+        """The Architecture's single ISA. Raises AttributeError if there is more than one ISA."""
+        if len(self.isas) > 1:
+            raise AttributeError('Arch has multiple ISAs')
+        return self.isas[0]
+
+    @property
+    def default_isa(self) -> InstructionSet:
+        """Return the default ISA."""
         return self.isas[0]
 
     @property

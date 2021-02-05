@@ -21,7 +21,7 @@ class Memory(abc.ABC):
 
     def __init__(self, arch: Architecture):
         self.arch = arch
-        self.isa = arch.isa
+        self.isa = arch.default_isa
         self.verbose = False
 
     @abc.abstractmethod
