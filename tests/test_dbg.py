@@ -2,7 +2,7 @@ from megastone.debug.errors import CPUError
 import pytest
 
 from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
-    StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, MemoryAccessError, FaultCause,
+    StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, Access, FaultCause,
     ARCH_X86)
 
 
@@ -159,42 +159,61 @@ def test_trace(arch_dbg, counter_hook):
     arch_dbg.run(count)
     assert counter_hook.count == count + 1
 
+class AccessHookFunc(CounterHookFunc):
+    def __init__(self):
+        super().__init__()
+        self.access = None
+
+    def __call__(self, dbg):
+        super().__call__(dbg)
+        self.access = dbg.curr_access
+
+@pytest.fixture
+def access_hook():
+    return AccessHookFunc()
 
 TEST_ADDRESS = DATA_ADDRESS + 9
 
 @pytest.fixture
 def rw_test_dbg(armthumb_dbg):
     assembly = f"""
+        MOV R2, 3
+
         LDR R0, =0x{TEST_ADDRESS-1:X}
         LDRB R1, [R0]
-        STRB R1, [R0]
+        STRB R2, [R0]
 
         LDR R0, =0x{TEST_ADDRESS:X}
         LDRB R1, [R0]
-        STRB R1, [R0]
+        STRB R2, [R0]
 
         LDR R0, =0x{TEST_ADDRESS+1:X}
         LDRB R1, [R0]
-        STRB R1, [R0]
+        STRB R2, [R0]
+
+        {'NOP;'*100}
     """
     armthumb_dbg.mem.write_code(CODE_ADDRESS, assembly)
+    armthumb_dbg.add_breakpoint(CODE_ADDRESS + 0x30)
     return armthumb_dbg
 
 
-def test_read_hook(rw_test_dbg: Debugger, counter_hook):
-    rw_test_dbg.add_read_hook(counter_hook, TEST_ADDRESS)
-    rw_test_dbg.run(9)
-    assert counter_hook.count == 1
+def test_read_hook(rw_test_dbg: Debugger, access_hook):
+    rw_test_dbg.add_read_hook(access_hook, TEST_ADDRESS)
+    rw_test_dbg.run()
+    assert access_hook.count == 1
+    assert access_hook.access == Access(AccessType.R, TEST_ADDRESS, 1)
 
-def test_write_hook(rw_test_dbg: Debugger, counter_hook):
-    rw_test_dbg.add_write_hook(counter_hook, TEST_ADDRESS)
-    rw_test_dbg.run(9)
-    assert counter_hook.count == 1
+def test_write_hook(rw_test_dbg: Debugger, access_hook):
+    rw_test_dbg.add_write_hook(access_hook, TEST_ADDRESS)
+    rw_test_dbg.run()
+    assert access_hook.count == 1
+    assert access_hook.access == Access(AccessType.W, TEST_ADDRESS, 1, 3)
 
-def test_rw_hook(rw_test_dbg: Debugger, counter_hook):
-    rw_test_dbg.add_rw_hook(counter_hook, TEST_ADDRESS)
-    rw_test_dbg.run(9)
-    assert counter_hook.count == 2
+def test_rw_hook(rw_test_dbg: Debugger, access_hook):
+    rw_test_dbg.add_rw_hook(access_hook, TEST_ADDRESS)
+    rw_test_dbg.run()
+    assert access_hook.count == 2
 
 class HookException(Exception):
     pass
@@ -228,10 +247,7 @@ def test_mem_fault(dbg):
     with pytest.raises(MemFaultError) as info:
         dbg.run(3)
     assert info.value.cause is FaultCause.UNMAPPED
-    assert info.value.access.type == AccessType.W
-    assert info.value.access.address == address
-    assert info.value.access.size == 4
-    assert info.value.access.value == value
+    assert info.value.access == Access(AccessType.W, address, 4, value)
     assert info.value.address == CODE_ADDRESS + 8
 
 def test_stack_read(arch_dbg, arch):
