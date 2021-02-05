@@ -22,13 +22,11 @@ class BinaryFormat(ExecFormat):
     Raw binary file.
 
     Arguments:
-    arch - Architecture instance or name (required).
+    arch - Architecture.
     base - base address (default 0).
     entry - entry address (default - base address).
     """
     def parse_fileobj(self, fileobj, *, arch, base=0, entry=None, **kwargs) -> BinaryFile:
-        if isinstance(arch, str):
-            arch = Architecture.by_name(arch)
         if entry is None:
             entry = base
 
