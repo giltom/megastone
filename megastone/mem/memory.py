@@ -9,6 +9,7 @@ import shutil
 
 from megastone.arch import Architecture
 from megastone.util import NamespaceMapping
+from megastone.assembler import assemble
 from .access import AccessType
 
 
@@ -118,7 +119,7 @@ class Memory(abc.ABC):
         """Assemble the given instructions and write them to the address."""
         isa = self._fix_isa(isa)
 
-        code = isa.assemble(assembly, address)
+        code = assemble(isa, assembly, address)
         if self.verbose:
             print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
@@ -373,7 +374,7 @@ class SegmentMemory(Memory):
         """Search for the given assembly instructions in all executable segments."""
         isa = self._fix_isa(isa)
 
-        code = isa.assemble(assembly)
+        code = assemble(isa, assembly)
         return self.search_all(code, alignment=isa.insn_alignment, perms=AccessType.X)
 
     @abc.abstractmethod

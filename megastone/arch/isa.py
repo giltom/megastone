@@ -1,4 +1,3 @@
-import keystone
 import capstone
 import unicorn
 
@@ -34,12 +33,7 @@ class InstructionSet(DatabaseEntry):
         self.cs_mode = cs_mode
         self.uc_arch = uc_arch
         self.uc_mode = uc_mode
-
-        self.ks = None
-        if self.ks_supported:
-            self.ks = keystone.Ks(self.ks_arch, self.ks_mode)
         
-        self.uc = None
         if self.cs_supported:
             self.cs = capstone.Cs(self.cs_arch, self.cs_mode)
             self.cs.detail = True
@@ -59,17 +53,6 @@ class InstructionSet(DatabaseEntry):
     @property
     def fully_supported(self):
         return self.ks_supported and self.cs_supported and self.uc_supported
-
-    def assemble(self, assembly, address=0):
-        """
-        Assemble the given instructions and return the assembled bytes.
-
-        `address`, if given, is the base address of the instructions.
-        """
-        data, _ = self.ks.asm(assembly, addr=address, as_bytes=True)
-        if data is None:
-            raise ValueError('Invalid assembly')
-        return data
 
     def disassemble(self, code, address=0, *, count=0):
         """
