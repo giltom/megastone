@@ -9,7 +9,8 @@ import shutil
 
 from megastone.arch import Architecture
 from megastone.util import NamespaceMapping
-from .access import AccessType
+from .access import AccessType, Access
+from .errors import MemoryAccessError
 
 
 MIN_ALLOC_ADDRESS = 0x1000
@@ -474,6 +475,7 @@ class SegmentMapping(NamespaceMapping):
             return False
         return True
 
+
 class MappableMemory(SegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
 
@@ -542,3 +544,48 @@ class MappableMemory(SegmentMemory):
     def lock(self):
         """Lock the memory so no new Segments can be mapped."""
         self.locked = True
+
+
+class SimpleMappableMemory(MappableMemory):
+    """MappableMemory abstract subclass that assumes that only one segment can be written at a time."""
+
+
+    @abc.abstractmethod
+    def _read_segment(self, segment: Segment, offset, size):
+        """Read data from the given segment at the given offset"""
+
+    @abc.abstractmethod
+    def _write_segment(self, segment: Segment, offset, data):
+        """Write data to the given segment at the given offset"""
+
+    def read_data(self, address, size):
+        return b''.join(
+            self._read_segment(seg, start, size)
+            for seg, start, size in
+            self._get_data_offsets(address, size, AccessType.R)
+        )
+
+    def write_data(self, address, data):
+        offset = 0
+        offsets = self._get_data_offsets(address, len(data), AccessType.W, data)
+        for seg, start, size in list(offsets): #we call list() to detect any errors before starting to write
+            self._write_segment(seg, start, data[offset : offset + size])
+            offset += size
+
+    def _get_data_offsets(self, address, size, atype, avalue=None):
+        #We need to deal with the case of a read/write that spans two adjacent segments
+        #This function yields segment, start_offset, size containing given address range
+        curr_address = address
+        end_address = address + size
+
+        while curr_address < end_address:
+            try:
+                seg = self.segments.by_address(curr_address)
+            except KeyError as e:
+                raise MemoryAccessError(Access(atype, address, size, avalue), 'unmapped') from e
+
+            start_offset = curr_address - seg.start
+            end_offset = min(end_address - seg.start, seg.size)
+            yield seg, start_offset, end_offset - start_offset
+
+            curr_address = seg.start + end_offset
