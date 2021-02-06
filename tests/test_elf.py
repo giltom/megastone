@@ -1,10 +1,8 @@
-from megastone.mem.access import Access
-from megastone.mem.errors import MemoryAccessError
 from pathlib import Path
 
 import pytest
 
-from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType
+from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType, Access, MemoryAccessError, Emulator
 
 
 PATH = Path(__file__).parent / 'files/mips_test'
@@ -106,3 +104,9 @@ def test_patch_error(elf):
         elf.mem.write(address, data)
     assert 'ELF' in str(info.value)
     assert info.value.access == Access(AccessType.W, address+bss_offset, len(data)-bss_offset, data[bss_offset:])
+
+def test_emu(seg_elf):
+    emu = Emulator.from_execfile(seg_elf)
+    assert emu.arch == ARCH_MIPS
+    assert emu.pc == seg_elf.symbols['__start']
+    assert emu.curr_insn.mnemonic == 'add'
