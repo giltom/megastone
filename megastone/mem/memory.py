@@ -467,13 +467,37 @@ class SegmentMapping(NamespaceMapping):
         return True
 
 
-class MappableMemory(SegmentMemory):
-    """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
+class DictSegmentMemory(SegmentMemory):
+    """Subclass of SegmentMemory that stores segments in a dict."""
 
     def __init__(self, arch: Architecture):
         super().__init__(arch)
-        self.locked = False
         self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
+
+    def _get_all_segments(self):
+        return self._segments.values()
+
+    def _num_segments(self):
+        return len(self._segments)
+
+    def _get_segment_by_name(self, name):
+        return self._segments[name]
+
+    def _add_segment(self, seg):
+        #Call in a subclass to initialize segments
+        if seg.name in self._segments:
+            raise MegastoneError(f'Segment with name "{seg.name}" already exists')
+
+        for old_seg in self.segments:
+            if old_seg.overlaps(seg):
+                raise MegastoneError('Segment overlap')
+
+        self._segments[seg.name] = seg
+        return seg
+
+
+class MappableMemory(DictSegmentMemory):
+    """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
 
     @abc.abstractmethod
     def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
@@ -507,38 +531,14 @@ class MappableMemory(SegmentMemory):
         address = max([*(seg.end for seg in self.segments), MIN_ALLOC_ADDRESS])
         address = round_up(address, ALLOC_ROUND_SIZE)
         return self.map(name, address, size, perms)
-        
-    def _get_all_segments(self):
-        return self._segments.values()
-
-    def _num_segments(self):
-        return len(self._segments)
-
-    def _get_segment_by_name(self, name):
-        return self._segments[name]
-
-    def _add_segment(self, seg):
-        #Call in a subclass to initialize segments
-        if self.locked:
-            raise MegastoneError(f'Can\'t map more segments to this Memory; copy it with load_memory()')
-
-        if seg.name in self._segments:
-            raise MegastoneError(f'Segment with name "{seg.name}" already exists')
-
-        for old_seg in self.segments:
-            if old_seg.overlaps(seg):
-                raise MegastoneError('Segment overlap')
-
-        self._segments[seg.name] = seg
-        return seg
-
-    def lock(self):
-        """Lock the memory so no new Segments can be mapped."""
-        self.locked = True
 
 
 class SimpleSegmentMemory(SegmentMemory):
-    """SegmentMemory abstract subclass that assumes that only one segment can be written at a time."""
+    """
+    SegmentMemory abstract subclass that assumes that only one segment can be written at a time.
+    
+    Can be mixed in with other SegmentMemory subclasses.
+    """
 
 
     @abc.abstractmethod
@@ -580,8 +580,3 @@ class SimpleSegmentMemory(SegmentMemory):
             yield seg, start_offset, end_offset - start_offset
 
             curr_address = seg.start + end_offset
-
-
-class SimpleMappableMemory(MappableMemory, SimpleSegmentMemory):
-    """ABC that combains mappable memory (segments can be created at runtime) with simple memory (only one segment can be accessed at a time)."""
-    pass

@@ -12,6 +12,12 @@ class UnsupportedError(MegastoneError):
 class NotFoundError(MegastoneError):
     pass
 
+class ParsingError(MegastoneError):
+    pass
+
+class BuildingError(MegastoneError):
+    pass
+
 class MegastoneWarning(Warning):
     """Base class for all custom warnings."""
     pass

@@ -1,3 +1,5 @@
+from megastone.mem.access import Access
+from megastone.mem.errors import MemoryAccessError
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,8 @@ from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType
 
 PATH = Path(__file__).parent / 'files/mips_test'
 
+MAGIC = 0xDEADBEEF
+
 
 @pytest.fixture
 def seg_elf():
@@ -15,6 +19,18 @@ def seg_elf():
 @pytest.fixture
 def sec_elf():
     return FORMAT_ELF.parse_file(PATH)
+
+@pytest.fixture(params=[True, False])
+def elf(request):
+    return FORMAT_ELF.parse_file(PATH, use_segments=request.param)
+
+@pytest.fixture
+def magic_address(elf):
+    return elf.symbols['start_data']
+
+@pytest.fixture
+def elf_data():
+    return PATH.read_bytes()
 
 def test_auto():
     file = FORMAT_AUTO.parse_file(PATH)
@@ -40,11 +56,13 @@ def test_segs(seg_elf):
 
     assert segs[0].perms == AccessType.RX
     assert segs[0].address == 0x400000
-    assert segs[0].size == 0x1000
+    assert segs[0].size == 0x00140
+    assert len(segs[0].read()) == segs[0].size
 
     assert segs[1].perms == AccessType.RW
-    assert segs[1].address == 0x410000
-    assert segs[1].size == 0x2000
+    assert segs[1].address == 0x00410140
+    assert segs[1].size == 0x01010
+    assert len(segs[1].read()) == segs[1].size
     assert seg_elf.arch.encode_word(0xDEADBEEF) in segs[1].read()
 
 def test_text(sec_elf):
@@ -67,3 +85,24 @@ def test_bss(sec_elf):
     assert bss.perms == AccessType.RW
     assert bss.size == 0x1000
     assert bss.read() == bytes(bss.size)
+
+def test_no_patch(elf, elf_data):
+    assert elf.build_bytes() == elf_data
+
+def test_patch_magic(elf, elf_data, magic_address):
+    magic2 = 0xFAFABABA
+    magic_data = elf.arch.encode_word(MAGIC)
+    magic2_data = elf.arch.encode_word(magic2)
+
+    elf.mem.write_word(magic_address, magic2)
+    assert elf.build_bytes() == elf_data.replace(magic_data, magic2_data)
+
+def test_patch_error(elf):
+    address = 0x41014E
+    data = b'12345'
+    bss_offset = 2
+
+    with pytest.raises(MemoryAccessError) as info:
+        elf.mem.write(address, data)
+    assert 'ELF' in str(info.value)
+    assert info.value.access == Access(AccessType.W, address+bss_offset, len(data)-bss_offset, data[bss_offset:])
