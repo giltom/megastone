@@ -1,4 +1,3 @@
-import io
 import abc
 
 from elftools.elf import elffile
@@ -6,9 +5,8 @@ from elftools.elf.constants import P_FLAGS, SH_FLAGS
 
 from ..execfile import ExecFile
 from ..format import ExecFormat
-from megastone.mem import BufferMemory, Access, AccessType, MappableMemory, Segment, SimpleSegmentMemory, DictSegmentMemory, MemoryAccessError
+from megastone.mem import Access, AccessType, Segment, SimpleSegmentMemory, DictSegmentMemory, MemoryAccessError
 from megastone.arch import Architecture
-from megastone.util import round_up, round_down
 from megastone.errors import UnsupportedError
 
 

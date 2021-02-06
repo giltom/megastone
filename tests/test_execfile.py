@@ -2,7 +2,7 @@ import pytest
 import tempfile
 
 
-from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile, MegastoneError, ExecFile, FORMAT_COM, ARCH_X86_16
+from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, MegastoneError, ExecFile, FORMAT_COM, ARCH_X86_16
 
 
 
