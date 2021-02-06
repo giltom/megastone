@@ -11,6 +11,7 @@ class COMFormat(BinaryFormat):
 
 FORMAT_COM = COMFormat(
     name='com',
-    alt_names=['dos']
+    alt_names=['dos'],
+    extensions=['com']
 )
 ExecFormat.register(FORMAT_COM)

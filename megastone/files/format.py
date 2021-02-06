@@ -13,9 +13,11 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
         name: str,
         alt_names: tuple = (),
         magic: bytes = None, #Magic bytes for autodetection. If None, won't be autodetected.
+        extensions: tuple = () #list of file extensions not including '.'
     ):
         super().__init__(name, alt_names)
         self.magic = magic
+        self.extensions = list(extensions)
 
     @abc.abstractmethod
     def parse_fileobj(self, fileobj, **kwargs) -> ExecFile:
@@ -36,5 +38,14 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
         """Return the ExecFormat with the given magic bytes, or None if not found."""
         for instance in ExecFormat.all():
             if instance.magic is not None and magic.startswith(instance.magic):
+                return instance
+        return None
+
+    @staticmethod
+    def by_extension(extension):
+        """Return the ExecFormat with the given file extension (without the .), or None if not found."""
+        extension = extension.lower()
+        for instance in ExecFormat.all():
+            if extension in instance.extensions:
                 return instance
         return None

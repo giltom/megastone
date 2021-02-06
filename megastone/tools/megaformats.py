@@ -7,9 +7,12 @@ def alt_list(alts):
 
 def main():
     for format in ms.ExecFormat.all():
-        print(f'{format.name} {alt_list(format.alt_names)}', end='')
+        print(f'{format.name} {alt_list(format.alt_names)}')
+        if len(format.extensions) > 0:
+            extensions = ' '.join('.' + ext for ext in format.extensions)
+            print(f'    extensions: {extensions}')
         if format.magic is not None:
-            print(f' magic: {format.magic.hex().upper()}', end='')
+            print(f'    magic: {format.magic.hex().upper()}')
         print()
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ class BinaryFormat(ExecFormat):
 
 FORMAT_BINARY = BinaryFormat(
     name='binary',
-    alt_names=['bin', 'raw', 'shellcode']
+    alt_names=['bin', 'raw', 'shellcode'],
+    extensions=['bin', 'dat']
 )
 ExecFormat.register(FORMAT_BINARY)
