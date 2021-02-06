@@ -83,12 +83,7 @@ class ELFFormat(ExecFormat):
 
         symbols = load_elf_symbols(elf)
 
-        return ELFFile(mem, elf['e_entry'], symbols)
-
-
-#We create use class just so users can check if they got an elf
-class ELFFile(ExecFile):
-    pass
+        return ExecFile(self, mem, elf['e_entry'], symbols)
 
 
 FORMAT_ELF = ELFFormat(

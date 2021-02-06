@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, ELFFile, AccessType
+from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType
 
 
 PATH = Path(__file__).parent / 'files/mips_test.elf'
@@ -18,7 +18,7 @@ def sec_elf():
 
 def test_auto():
     file = FORMAT_AUTO.parse_file(PATH)
-    assert isinstance(file, ELFFile)
+    assert file.format is FORMAT_ELF
 
 def test_arch(seg_elf):
     assert seg_elf.arch is ARCH_MIPS

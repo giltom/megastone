@@ -46,7 +46,7 @@ def test_auto_default():
     with pytest.warns(MegastoneWarning):
         f = FORMAT_AUTO.parse_bytes(BIN_DATA, arch=ARCH_ARM)
 
-    assert isinstance(f, BinaryFile)
+    assert f.format is FORMAT_BINARY
 
 def test_lock(execfile: ExecFile):
     with pytest.raises(MegastoneError):
@@ -54,6 +54,7 @@ def test_lock(execfile: ExecFile):
 
 def test_com():
     file = FORMAT_COM.parse_bytes(b'aaaa')
+    assert file.format is FORMAT_COM
     assert file.seg.address == FORMAT_COM.base_address
     assert file.seg.read() == b'aaaa'
     assert file.arch is ARCH_X86_16

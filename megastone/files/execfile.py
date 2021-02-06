@@ -9,14 +9,16 @@ from megastone.mem import SegmentMemory
 class ExecFile:
     """Base class for executable files."""
 
-    def __init__(self, mem: SegmentMemory, entry: int, symbols=None):
+    def __init__(self, format, mem: SegmentMemory, entry: int, symbols=None):
         """
         Do not call directly - use ExecFormat.parse_xxx() methods.
 
+        format - ExecFormat this file was created from.
         mem - SegmentMemory containing file contents.
         entry - Entry address
         symbols - Symbol dictionary, if any.
         """
+        self.format = format
         self.mem = mem
         self.arch = self.mem.arch
         self.entry = entry

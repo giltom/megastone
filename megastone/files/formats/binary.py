@@ -33,7 +33,7 @@ class BinaryFormat(ExecFormat):
         mem = BufferMemory(arch)
         mem.load(SEGMENT_NAME, base, data)
         mem.lock()
-        return BinaryFile(mem, entry)
+        return BinaryFile(self, mem, entry)
 
 
 FORMAT_BINARY = BinaryFormat(
