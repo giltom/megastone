@@ -6,8 +6,8 @@ import unicorn
 from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
 from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError
 from megastone.arch import Architecture, Register
-from megastone.util import round_up
-from megastone.errors import warning, MegastoneError, UnsupportedError
+from megastone.util import round_up, round_down
+from megastone.errors import UnsupportedError
 from megastone.files import ExecFile
 
 
@@ -62,11 +62,11 @@ class UnicornMemory(MappableMemory):
         self._uc = uc
 
     def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
-        if start % Emulator.PAGE_SIZE != 0:
-            raise MegastoneError(f'Emulator segment addresses must be aligned 0x{Emulator.PAGE_SIZE:X}')
-        if size % Emulator.PAGE_SIZE != 0:
-            warning(f'Rounding up segment size to multiple of 0x{Emulator.PAGE_SIZE:X}')
-            size = Emulator.round_up(size)
+        #Unicorn only supports mappings aligned to 0x1000
+        end = start + size
+        start = round_down(start, Emulator.PAGE_SIZE)
+        end = round_up(end, Emulator.PAGE_SIZE)
+        size = end - start
 
         seg = Segment(name, start, size, perms, self)
         self._add_segment(seg)

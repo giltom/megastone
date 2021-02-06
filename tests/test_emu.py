@@ -34,8 +34,8 @@ def test_alloc_stack(emu: Emulator):
     assert emu.stack[0] == 0xDEAD
 
 def test_round(emu: Emulator):
-    with pytest.warns(MegastoneWarning):
-        segment = emu.mem.map('code', 0x1000, 0x80)
+    segment = emu.mem.map('code', 0x1080, 0x80)
+    assert segment.start == 0x1000
     assert segment.size == Emulator.PAGE_SIZE
 
 def test_from_mem():
@@ -51,8 +51,7 @@ def test_from_file(arch, isa, nop):
 
     file = FORMAT_BINARY.parse_bytes(data, arch=arch, base=address, entry=entry)
 
-    with pytest.warns(MegastoneWarning):
-        emu = Emulator.from_execfile(file)
+    emu = Emulator.from_execfile(file)
 
     assert isa.address_to_pointer(emu.pc) == entry
     assert emu.isa == isa
