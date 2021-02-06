@@ -5,7 +5,7 @@ from elftools.elf.constants import P_FLAGS, SH_FLAGS
 
 from ..execfile import ExecFile
 from ..format import ExecFormat
-from megastone.mem import Access, AccessType, Segment, SimpleSegmentMemory, DictSegmentMemory, MemoryAccessError
+from megastone.mem import Access, AccessType, Segment, SplittingSegmentMemory, DictSegmentMemory, MemoryAccessError
 from megastone.arch import Architecture
 from megastone.errors import UnsupportedError
 
@@ -76,7 +76,7 @@ class ELFSegmentSegment(BaseELFSegment):
         return self._segment['p_filesz']
 
 
-class BaseELFMemory(DictSegmentMemory, SimpleSegmentMemory):
+class BaseELFMemory(DictSegmentMemory, SplittingSegmentMemory):
     def __init__(self, elf: elffile.ELFFile):
         super().__init__(Architecture.by_name(elf.get_machine_arch()))
 

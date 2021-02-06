@@ -1,5 +1,5 @@
 from megastone.errors import MegastoneError
-from .memory import MappableMemory, SimpleSegmentMemory, Segment
+from .memory import MappableMemory, SplittingSegmentMemory, Segment
 from .access import AccessType
 
 
@@ -10,7 +10,7 @@ class BufferSegment(Segment):
         self._data = bytearray(size)
         
 
-class BufferMemory(MappableMemory, SimpleSegmentMemory):
+class BufferMemory(MappableMemory, SplittingSegmentMemory):
     """
     Simple Memory implementation backed by host memory buffers.
 

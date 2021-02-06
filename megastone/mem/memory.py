@@ -533,10 +533,11 @@ class MappableMemory(DictSegmentMemory):
         return self.map(name, address, size, perms)
 
 
-class SimpleSegmentMemory(SegmentMemory):
+class SplittingSegmentMemory(SegmentMemory):
     """
     SegmentMemory abstract subclass that assumes that only one segment can be written at a time.
-    
+
+    It splits each read/write into multiple operations if it overlaps multiple adjacent segments.
     Can be mixed in with other SegmentMemory subclasses.
     """
 
