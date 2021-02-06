@@ -26,7 +26,7 @@ class Memory(abc.ABC):
         self.verbose = False
 
     @abc.abstractmethod
-    def write_data(self, address, data):
+    def _write(self, address, data):
         """
         Write bytes at the given address.
         
@@ -35,7 +35,7 @@ class Memory(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def read_data(self, address, size) -> bytes:
+    def _read(self, address, size) -> bytes:
         """
         Read bytes from the given address.
         
@@ -43,13 +43,13 @@ class Memory(abc.ABC):
         """
         pass
 
+    def read(self, address, size):
+        return self._read(address, size)
+
     def write(self, address, data):
         if self.verbose:
             print(f'Write 0x{len(data):X} bytes to 0x{address:X}')
-        self.write_data(address, data)
-    
-    def read(self, address, size):
-        return self.read_data(address, size)
+        self._write(address, data)
 
     def read_int(self, address, size, *, signed=False):
         """Read an integer from the given address."""
@@ -558,14 +558,14 @@ class SimpleMappableMemory(MappableMemory):
     def _write_segment(self, segment: Segment, offset, data):
         """Write data to the given segment at the given offset"""
 
-    def read_data(self, address, size):
+    def _read(self, address, size):
         return b''.join(
             self._read_segment(seg, start, size)
             for seg, start, size in
             self._get_data_offsets(address, size, AccessType.R)
         )
 
-    def write_data(self, address, data):
+    def _write(self, address, data):
         offset = 0
         offsets = self._get_data_offsets(address, len(data), AccessType.W, data)
         for seg, start, size in list(offsets): #we call list() to detect any errors before starting to write

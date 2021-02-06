@@ -73,17 +73,17 @@ class UnicornMemory(MappableMemory):
         self._uc.mem_map(start, size, perms_to_uc_prot(perms))
         return seg
 
-    def write_data(self, address, data):
-        try:
-            self._uc.mem_write(address, data)
-        except unicorn.UcError as e:
-            raise MemoryAccessError(Access(AccessType.W, address, len(data), data), str(e))
-
-    def read_data(self, address, size):
+    def _read(self, address, size):
         try:
             return bytes(self._uc.mem_read(address, size))
         except unicorn.UcError as e:
             raise MemoryAccessError(Access(AccessType.R, address, size), str(e))
+
+    def _write(self, address, data):
+        try:
+            self._uc.mem_write(address, data)
+        except unicorn.UcError as e:
+            raise MemoryAccessError(Access(AccessType.W, address, len(data), data), str(e))
 
 
 class Emulator(Debugger):
