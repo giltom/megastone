@@ -13,7 +13,7 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
         name: str,
         alt_names: tuple = (),
         magic: bytes = None, #Magic bytes for autodetection. If None, won't be autodetected.
-        extensions: tuple = () #list of file extensions not including '.'
+        extensions: tuple = () #list of file extensions including '.'
     ):
         super().__init__(name, alt_names)
         self.magic = magic
@@ -43,7 +43,7 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
 
     @staticmethod
     def by_extension(extension):
-        """Return the ExecFormat with the given file extension (without the .), or None if not found."""
+        """Return the ExecFormat with the given file extension (including the .), or None if not found."""
         extension = extension.lower()
         for instance in ExecFormat.all():
             if extension in instance.extensions:

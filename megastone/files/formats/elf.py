@@ -89,6 +89,6 @@ class ELFFormat(ExecFormat):
 FORMAT_ELF = ELFFormat(
     name='elf',
     magic=b'\x7fELF',
-    extensions=['elf', 'o']
+    extensions=['.elf', '.o']
 )
 ExecFormat.register(FORMAT_ELF)

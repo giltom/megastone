@@ -1,4 +1,5 @@
 import pytest
+import tempfile
 
 
 from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile, MegastoneError, ExecFile, FORMAT_COM, ARCH_X86_16
@@ -45,7 +46,11 @@ def test_seg(execfile):
 def test_auto_default():
     with pytest.warns(MegastoneWarning):
         f = FORMAT_AUTO.parse_bytes(BIN_DATA, arch=ARCH_ARM)
+    assert f.format is FORMAT_BINARY
 
+def test_auto_file_default(temp_file):
+    with pytest.warns(MegastoneWarning):
+        f = FORMAT_AUTO.parse_file(temp_file.name, arch=ARCH_X86_16)
     assert f.format is FORMAT_BINARY
 
 def test_lock(execfile: ExecFile):
@@ -58,3 +63,9 @@ def test_com():
     assert file.seg.address == FORMAT_COM.base_address
     assert file.seg.read() == b'aaaa'
     assert file.arch is ARCH_X86_16
+
+def test_auto_extension():
+    with tempfile.NamedTemporaryFile(suffix='.com', buffering=0) as temp_file:
+        temp_file.write(bytes(20))
+        file = FORMAT_AUTO.parse_file(temp_file.name)
+        assert file.format is FORMAT_COM

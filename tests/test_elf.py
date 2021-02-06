@@ -5,7 +5,7 @@ import pytest
 from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType
 
 
-PATH = Path(__file__).parent / 'files/mips_test.elf'
+PATH = Path(__file__).parent / 'files/mips_test'
 
 
 @pytest.fixture
