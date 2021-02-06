@@ -537,8 +537,8 @@ class MappableMemory(SegmentMemory):
         self.locked = True
 
 
-class SimpleMappableMemory(MappableMemory):
-    """MappableMemory abstract subclass that assumes that only one segment can be written at a time."""
+class SimpleSegmentMemory(SegmentMemory):
+    """SegmentMemory abstract subclass that assumes that only one segment can be written at a time."""
 
 
     @abc.abstractmethod
@@ -580,3 +580,8 @@ class SimpleMappableMemory(MappableMemory):
             yield seg, start_offset, end_offset - start_offset
 
             curr_address = seg.start + end_offset
+
+
+class SimpleMappableMemory(MappableMemory, SimpleSegmentMemory):
+    """ABC that combains mappable memory (segments can be created at runtime) with simple memory (only one segment can be accessed at a time)."""
+    pass
