@@ -1,4 +1,3 @@
-from megastone.arch import Architecture
 from ..execfile import ExecFile
 from ..format import ExecFormat
 from megastone.mem import BufferMemory

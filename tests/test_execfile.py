@@ -1,7 +1,7 @@
 import pytest
 
 
-from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile, MegastoneError, ExecFile
+from megastone import FORMAT_BINARY, FORMAT_AUTO, ARCH_ARM, MegastoneWarning, BinaryFile, MegastoneError, ExecFile, FORMAT_COM, ARCH_X86_16
 
 
 
@@ -51,3 +51,9 @@ def test_auto_default():
 def test_lock(execfile: ExecFile):
     with pytest.raises(MegastoneError):
         execfile.mem.map('test', 0x6000, 0x1000)
+
+def test_com():
+    file = FORMAT_COM.parse_bytes(b'aaaa')
+    assert file.seg.address == FORMAT_COM.base_address
+    assert file.seg.read() == b'aaaa'
+    assert file.arch is ARCH_X86_16
