@@ -27,7 +27,8 @@ setuptools.setup(
         'keystone-engine',
         'capstone',
         'unicorn',
-        'pyelftools'
+        'pyelftools',
+        'bincopy'
     ],
     classifiers=[
         'Programming Language :: Python :: 3',
