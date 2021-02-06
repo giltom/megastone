@@ -1,7 +1,7 @@
 import sys
 import io
 
-from megastone.tools import megaarches, megaasm, megadisasm
+from megastone.tools import megaarches, megaasm, megadisasm, megaformats
 from megastone.util import hex_spaces
 
 
@@ -21,6 +21,13 @@ def set_argv(monkeypatch, *args):
 
 def test_megaarches(capfd):
     megaarches.main()
+    output = capfd.readouterr()
+    assert len(output.out) > 0
+    assert len(output.err) == 0
+
+
+def test_megaformats(capfd):
+    megaformats.main()
     output = capfd.readouterr()
     assert len(output.out) > 0
     assert len(output.err) == 0

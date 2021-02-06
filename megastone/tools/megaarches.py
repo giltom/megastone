@@ -1,6 +1,3 @@
-import argparse
-import sys
-
 from megastone import Architecture
 
 NUM_REGS = 40

@@ -18,7 +18,8 @@ setuptools.setup(
         'console_scripts' : [
             'megaasm=megastone.tools.megaasm:main',
             'megaarches=megastone.tools.megaarches:main',
-            'megadisasm=megastone.tools.megadisasm:main'
+            'megadisasm=megastone.tools.megadisasm:main',
+            'megaformats=megastone.tools.megaformats:main'
         ]
     },
     python_requires='>=3.8',
