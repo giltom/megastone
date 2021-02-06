@@ -226,3 +226,7 @@ def test_stream(mem: Memory):
     offset = 2
     fileobj.seek(offset)
     assert fileobj.tell() == offset
+
+def test_contains(mem):
+    assert SEG_NAME in mem.segments
+    assert 'asdfasdf' not in mem.segments

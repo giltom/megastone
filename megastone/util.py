@@ -14,6 +14,9 @@ def round_up(value, size):
         return value
     return (value // size + 1) * size
 
+def round_down(value, size):
+    return (value // size) * size
+
 
 def bits_to_mask(bits):
     return (1 << bits) - 1

@@ -9,6 +9,9 @@ class MegastoneError(Exception):
 class UnsupportedError(MegastoneError):
     pass
 
+class NotFoundError(MegastoneError):
+    pass
+
 class MegastoneWarning(Warning):
     """Base class for all custom warnings."""
     pass

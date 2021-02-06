@@ -467,6 +467,12 @@ class SegmentMapping(NamespaceMapping):
     def __len__(self):
         return self._mem._num_segments()
 
+    def __contains__(self, name):
+        try:
+            self._mem._get_segment_by_name(name)
+        except KeyError:
+            return False
+        return True
 
 class MappableMemory(SegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""

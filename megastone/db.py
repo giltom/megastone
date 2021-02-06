@@ -1,3 +1,5 @@
+from megastone.errors import NotFoundError
+
 class DatabaseEntry:
     """
     Generic class representing an entry in an information database.
@@ -21,7 +23,7 @@ class DatabaseEntry:
         for instance in cls._instances:
             if instance.name == name or name in instance.alt_names:
                 return instance
-        raise ValueError(f'Unknown {cls.__name__} "{name}"')
+        raise NotFoundError(f'Unknown {cls.__name__} "{name}"')
 
     @classmethod
     def all(cls):
