@@ -230,3 +230,17 @@ def test_stream(mem: Memory):
 def test_contains(mem):
     assert SEG_NAME in mem.segments
     assert 'asdfasdf' not in mem.segments
+
+def test_rw_adjacent(mem: MappableMemory):
+    data1 = b'data1'
+    data2 = b'data2'
+    data = data1 + data2
+    address = SEG_ADDRESS + SEG_SIZE - len(data1)
+
+    mem.map('seg2', SEG_ADDRESS + SEG_SIZE, 0x1000)
+
+    mem.write(address, data1 + data2)
+    assert mem.read(address, len(data1)) == data1
+    assert mem.read(SEG_ADDRESS + SEG_SIZE, len(data2)) == data2
+    assert mem.read(address, len(data)) == data
+    
