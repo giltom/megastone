@@ -349,15 +349,6 @@ class Segment:
     def contains_address(self, address):
         return self.start <= address < self.end
 
-    def get_start(self):
-        return self.start
-    
-    def get_size(self):
-        return self.size
-    
-    def get_end(self):
-        return self.end
-
     def read(self):
         """Read and return the entire segment data."""
         return self.mem.read(self.start, self.size)

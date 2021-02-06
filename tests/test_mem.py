@@ -154,9 +154,9 @@ def test_adjacent(mem):
     assert mem.segments.seg2.adjacent(mem.segments.seg)
 
 def test_seg(mem):
-    assert mem.segments.seg.get_start() == SEG_ADDRESS
-    assert mem.segments.seg.get_size() == SEG_SIZE
-    assert mem.segments.seg.get_end() == SEG_ADDRESS + SEG_SIZE
+    assert mem.segments.seg.address == SEG_ADDRESS
+    assert mem.segments.seg.size == SEG_SIZE
+    assert mem.segments.seg.end == SEG_ADDRESS + SEG_SIZE
 
 def test_seg_repr(mem):
     assert hex(SEG_ADDRESS) in repr(mem.segments.seg)
