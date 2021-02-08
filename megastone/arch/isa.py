@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import typing
+from collections.abc import Generator, Iterable
 
 import keystone
 import capstone
@@ -29,10 +31,9 @@ class InstructionSet(DatabaseEntry):
 
     def __init__(self, *,
         name: str,               #Name of architecture. Should be lowercase.
-        alt_names: tuple = (),   #List of alternate names recognized by by_name().
+        alt_names: Iterable[str] = (),   #List of alternate names recognized by by_name().
         insn_alignment: int,     #Required alignment of instructions
-        min_insn_size: int,      #Size of smallest instruction
-        max_insn_size: int,      #Size of largest instruction
+        insn_sizes: Iterable[int],
         ks_arch: int = None,     #Keystone arch ID, None if keystone isn't supported
         ks_mode: int = 0,        #Keystone mode ID
         cs_arch: int = None,     #Capstone arch ID, None if capstone isn't supported
@@ -40,8 +41,9 @@ class InstructionSet(DatabaseEntry):
     ):
         super().__init__(name, alt_names)
         self.insn_alignment = insn_alignment
-        self.min_insn_size = min_insn_size
-        self.max_insn_size = max_insn_size
+        self.insn_sizes = sorted(set(insn_sizes))
+        self.min_insn_size = min(self.insn_sizes)
+        self.max_insn_size = max(self.insn_sizes)
         self.ks_arch = ks_arch
         self.ks_mode = ks_mode
         self.cs_arch = cs_arch
@@ -79,7 +81,7 @@ class InstructionSet(DatabaseEntry):
             raise AssemblyError('Invalid assembly')
         return data
 
-    def disassemble(self, code, address=0, *, count=0):
+    def disassemble(self, code, address=0, *, count=None) -> Generator[capstone.CsInsn]:
         """
         Disassemble the given machine code and yield assembly instructions.
         Assembly will stop at an invalid instruction.
@@ -87,6 +89,10 @@ class InstructionSet(DatabaseEntry):
         `address` - The base address of the code.
         `count` - Maximum number of instructions to disassemble (if not given - unlimited).
         """
+        if count == 0:
+            return
+        if count is None:
+            count = 0
         try:
             yield from self._cs.disasm(code, offset=address, count=count)
         except capstone.CsError as e:

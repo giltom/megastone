@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Generator, Iterable
+from megastone.arch.isa import DisassemblyError
 from pathlib import Path
 from dataclasses import dataclass
 import io
@@ -14,6 +15,7 @@ from .access import AccessType, Access
 from .errors import MemoryAccessError
 
 
+DISASSEMBLY_CHUNK_SIZE = 0x400
 MIN_ALLOC_ADDRESS = 0x1000
 ALLOC_ROUND_SIZE = 0x1000
 
@@ -124,20 +126,87 @@ class Memory(abc.ABC):
         if self.verbose:
             print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
-    
+
     def disassemble_one(self, address, isa=None):
         """Disassemble the instruction at the given address and return it."""
+        insns = list(self.disassemble(address, max_num=1, isa=isa))
+        if len(insns) == 0:
+            raise DisassemblyError(f'Invalid instruction at 0x{address:X}')
+        return insns[0]
+
+    def disassemble_n(self, address, num, isa=None):
+        """
+        Disassemble and return a list of exactly `num` instructions at `address`.
+        
+        Raise a DisassemblyError if there are less valid instructions available.
+        """
+        insns = list(self.disassemble(address, max_num=num, isa=isa))
+        if len(insns) != num:
+            if len(insns) == 0:
+                last = address
+            else:
+                last = insns[-1].address + insns[-1].size
+            raise DisassemblyError(f'Invalid instruction at 0x{last:X}')
+        return insns
+
+    def disassemble(self, address, max_num=None, isa=None):
+        """
+        Disassemble at the given address and yield the disassembled instructions, until an invalid instruction is reached.
+
+        if `count` is not None, it specifies the maximum number of instructions to disassemble.
+        """
         isa = self._fix_isa(isa)
 
-        code = self.read(address, isa.max_insn_size)
-        return isa.disassemble_one(code, address)
-    
-    def disassemble(self, address, count, isa=None):
-        """Disassemble `count` instructions at the given address and return an iterator over the disassembled instructions."""
-        for _ in range(count):
-            inst = self.disassemble_one(address, isa)
-            yield inst
-            address += inst.size
+        size_remaining = self._get_max_read_size(address)
+        if size_remaining is None:
+            yield from self._disassemble_unknown_size(address, max_num, isa)
+            return
+
+        if max_num is None:
+            chunk_size = DISASSEMBLY_CHUNK_SIZE
+        else:
+            chunk_size = min(DISASSEMBLY_CHUNK_SIZE, max_num * isa.max_insn_size)
+
+        count = 0
+        while (max_num is None or count < max_num) and size_remaining >= isa.min_insn_size:
+            read_size = min(size_remaining, chunk_size)
+            chunk = self.read(address, read_size)
+
+            total_size = 0
+            curr_max = None if max_num is None else max_num - count
+            for insn in isa.disassemble(chunk, address, count=curr_max):
+                yield insn
+                total_size += insn.size
+                count += 1
+
+            if total_size == 0 or read_size - total_size > isa.max_insn_size: #too many bytes remain - we must have hit an invalid instruction
+                break
+
+            address += total_size
+            size_remaining -= total_size
+
+    def _disassemble_unknown_size(self, address, max_num, isa):
+        count = 0
+        while max_num is None or count < max_num:
+            try:
+                insn = self._disassemble_one_unknown_size(address, isa)
+            except (DisassemblyError, MemoryAccessError):
+                break
+
+            yield insn
+            address += insn.size
+            count += 1
+
+    def _disassemble_one_unknown_size(self, address, isa: InstructionSet):
+        for size in reversed(isa.insn_sizes):
+            try:
+                data = self.read(address, size)
+            except MemoryAccessError:
+                if size == isa.min_insn_size:
+                    raise
+            else:
+                return isa.disassemble_one(data, address)
+        assert False      
 
     def create_fileobj(self, address, size=None):
         """
@@ -190,7 +259,6 @@ class Memory(abc.ABC):
                 return address
             search_start = offset + 1
 
-
     def __getitem__(self, key):
         #Expose memory as a bytes-like object, so we can write e.g. memory[0x4:0x8]
         if isinstance(key, int):
@@ -225,6 +293,9 @@ class Memory(abc.ABC):
             return self.default_isa
         return isa
 
+    def _get_max_read_size(self, address):
+        #Return maximum amount of bytes that can be read from address, or None if not known
+        return None
 
 
 class BaseMemoryIO(io.RawIOBase):
@@ -378,6 +449,10 @@ class Segment:
         """Search the segment for bytes, returning the found address or None if not found."""
         return self.mem.search(self.start, self.size, value, alignment=alignment)
 
+    def disassemble(self, isa=None):
+        """Disassemble starting at the segment start."""
+        return self.mem.disassemble(self.address, isa=isa)
+
 
 class SegmentMemory(Memory):
     """
@@ -434,6 +509,12 @@ class SegmentMemory(Memory):
                 return seg
         raise KeyError(f'No segment contains address 0x{address:X}')
 
+    def _get_max_read_size(self, address):
+        try:
+            seg = self._get_segment_by_address(address)
+        except KeyError:
+            return None
+        return seg.end - address
 
 class SegmentMapping(NamespaceMapping[Segment]):
     """Helper class used to access segments."""

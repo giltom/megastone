@@ -16,8 +16,7 @@ CPSR_THUMB_MASK = 1 << 5
 class ARMInstructionSet(InstructionSet):
     def __init__(self, **kwargs):
         kwargs.update(
-            insn_alignment=kwargs['min_insn_size'],
-            max_insn_size=4,
+            insn_alignment=min(kwargs['insn_sizes']),
             ks_arch=keystone.KS_ARCH_ARM,
             cs_arch=capstone.CS_ARCH_ARM
         )
@@ -77,14 +76,14 @@ ARM_REGS = RegisterSet.from_libs('arm')
 ISA_ARM = ARMInstructionSet(
     name='arm',
     alt_names=['arm32', 'armle'],
-    min_insn_size=4,
+    insn_sizes=[4],
     ks_mode=keystone.KS_MODE_ARM | keystone.KS_MODE_LITTLE_ENDIAN,
     cs_mode=capstone.CS_MODE_ARM | capstone.CS_MODE_LITTLE_ENDIAN
 )
 
 ISA_THUMB = ThumbInstructionSet(
     name='thumb',
-    min_insn_size=2,
+    insn_sizes=[2, 4],
     ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,
     cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN
 )

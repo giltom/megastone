@@ -15,8 +15,8 @@ class MIPSArchitecture(SimpleArchitecture):
     def __init__(self, **kwargs):
         kwargs.update(
             regs=MIPS_REGS,
-            insn_alignment=kwargs['min_insn_size'],
-            max_insn_size=4,
+            insn_alignment=4,
+            insn_sizes=[4],
             ks_arch=ks.KS_ARCH_MIPS,
             cs_arch=cs.CS_ARCH_MIPS,
             uc_arch=uc.UC_ARCH_MIPS,
@@ -33,7 +33,6 @@ ARCH_MIPS = MIPSArchitecture(
     alt_names=['mips32', 'mipseb', 'mips32eb'],
     bits=32,
     endian=Endian.BIG,
-    min_insn_size=4,
     ks_mode=ks.KS_MODE_MIPS32 | ks.KS_MODE_BIG_ENDIAN,
     cs_mode=cs.CS_MODE_MIPS32 | cs.CS_MODE_BIG_ENDIAN,
     uc_mode=uc.UC_MODE_MIPS32 | uc.UC_MODE_BIG_ENDIAN
@@ -46,7 +45,6 @@ ARCH_MIPS64 = MIPSArchitecture(
     alt_names=['mips64eb'],
     bits=64,
     endian=Endian.BIG,
-    min_insn_size=4,
     ks_mode=ks.KS_MODE_MIPS64 | ks.KS_MODE_BIG_ENDIAN,
     cs_mode=cs.CS_MODE_MIPS64 | cs.CS_MODE_BIG_ENDIAN,
     uc_mode=uc.UC_MODE_MIPS64 | uc.UC_MODE_BIG_ENDIAN

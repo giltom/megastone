@@ -14,8 +14,7 @@ class GenericArchitecture(SimpleArchitecture):
             bits=bits,
             endian=endian,
             insn_alignment=1,
-            min_insn_size=bits//8,
-            max_insn_size=bits//8
+            insn_sizes=[bits//8]
         )
 
 
