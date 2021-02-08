@@ -1,15 +1,19 @@
-import io
-from megastone.errors import UnsupportedError
-from pathlib import Path
+from __future__ import annotations
 
+import io
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from megastone.mem import SegmentMemory
+
+if TYPE_CHECKING:
+    from .format import ExecFormat
 
 
 class ExecFile:
     """Base class for executable files."""
 
-    def __init__(self, format, mem: SegmentMemory, entry: int, symbols=None):
+    def __init__(self, format: ExecFormat, mem: SegmentMemory, entry: int, symbols=None):
         """
         Do not call directly - use ExecFormat.parse_xxx() methods.
 
@@ -22,7 +26,7 @@ class ExecFile:
         self.mem = mem
         self.arch = self.mem.arch
         self.entry = entry
-        self.symbols = dict(symbols) if symbols is not None else {}
+        self.symbols: dict[str, int] = dict(symbols) if symbols is not None else {}
 
     def build_fileobj(self, fileobj):
         """Write the patched file to a file object. Not supported by all implementations."""
@@ -33,7 +37,7 @@ class ExecFile:
         with Path(path).open('wb') as fileobj:
             self.build_fileobj(fileobj)
 
-    def build_bytes(self):
+    def build_bytes(self) -> bytes:
         """Build the file and return the built bytes. Not supported by all implementations."""
         fileobj = io.BytesIO()
         self.build_fileobj(fileobj)

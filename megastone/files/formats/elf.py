@@ -157,7 +157,7 @@ def parse_elf_symbols(elf: elffile.ELFFile):
 
 
 class ELFFormat(ExecFormat):
-    def parse_fileobj(self, fileobj, *, use_segments=False, **kwargs) -> ExecFile:
+    def parse_fileobj(self, fileobj, *, use_segments=False, **kwargs):
         elf = elffile.ELFFile(fileobj)
         entry = elf['e_entry']
         symbols = parse_elf_symbols(elf)

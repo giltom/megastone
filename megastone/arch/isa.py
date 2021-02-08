@@ -1,8 +1,15 @@
+from __future__ import annotations
+import typing
+
 import keystone
 import capstone
 
 from megastone.db import DatabaseEntry
 from megastone.errors import MegastoneError
+
+
+if typing.TYPE_CHECKING:
+    from .architecture import Architecture
 
 
 class AssemblyError(MegastoneError):
@@ -39,6 +46,7 @@ class InstructionSet(DatabaseEntry):
         self.ks_mode = ks_mode
         self.cs_arch = cs_arch
         self.cs_mode = cs_mode
+        self.arch: Architecture = None #Will be set by Architecture when added
 
         self._ks = None
         if self.ks_supported:
@@ -56,7 +64,7 @@ class InstructionSet(DatabaseEntry):
     def cs_supported(self):
         return self.cs_arch is not None
 
-    def assemble(self, assembly, address=0):
+    def assemble(self, assembly, address=0) -> bytes:
         """
         Assemble the given instructions and return the assembled bytes.
 

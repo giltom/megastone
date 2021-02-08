@@ -1,23 +1,30 @@
+from __future__ import annotations
+
 import importlib
+import abc
+from collections.abc import Generator
+import dataclasses
+
 
 import unicorn
 
 from megastone.util import NamespaceMapping
-import abc
 
 
 INVALID_REG_NAMES = ['invalid']
 
+
+@dataclasses.dataclass(frozen=True)
 class Register:
     """Configuration of a single CPU register"""
 
-    def __init__(self, name, *, cs_id=None, uc_id=None):
-        self.name = name
-        self.cs_id = cs_id
-        self.uc_id = uc_id
+    name: str
+    cs_id: int = None
+    uc_id: int = None
 
     def __repr__(self):
         return f"<Register '{self.name}'>"
+
 
 def _reg_ids_from_module(module, prefix):
     reg_ids = {}
@@ -29,7 +36,8 @@ def _reg_ids_from_module(module, prefix):
             reg_ids[reg_name] = value
     return reg_ids
 
-class RegisterSet(NamespaceMapping):
+
+class RegisterSet(NamespaceMapping[Register]):
     """The set of registers in an architecture. Note that this can include many aliases for the same register."""
 
     def __init__(self, registers):
@@ -64,7 +72,7 @@ class RegisterSet(NamespaceMapping):
         regs = {name : Register(name, cs_id=cs_id) for name, cs_id in cs_ids.items()}
         for name, uc_id in uc_ids.items():
             if name in regs:
-                regs[name].uc_id = uc_id
+                regs[name] = dataclasses.replace(regs[name], uc_id=uc_id)
             else:
                 regs[name] = Register(name, uc_id=uc_id)
 
@@ -73,7 +81,7 @@ class RegisterSet(NamespaceMapping):
 
         return cls(regs.values())
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Register]:
         yield from self._regs.values()
 
     def __len__(self):
@@ -86,7 +94,7 @@ class RegisterSet(NamespaceMapping):
         return name in self._regs
 
 
-class BaseRegisterState(NamespaceMapping):
+class BaseRegisterState(NamespaceMapping[int]):
     """
     Base class representing the current register state in the CPU.
     
@@ -112,7 +120,7 @@ class BaseRegisterState(NamespaceMapping):
         """Set the value of a register."""
         pass
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> int:
         reg = self._name_to_reg(key)
         return self.read(reg)
     

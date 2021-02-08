@@ -1,7 +1,6 @@
 import unicorn
 import keystone
 import capstone
-import capstone.arm64_const
 
 from ..architecture import SimpleArchitecture, Endian
 from ..regs import RegisterSet

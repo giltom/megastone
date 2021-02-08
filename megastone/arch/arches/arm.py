@@ -4,7 +4,7 @@ import capstone
 import capstone.arm_const
 
 from ..architecture import Architecture, Endian
-from ..regs import RegisterSet
+from ..regs import BaseRegisterState, RegisterSet
 from ..isa import InstructionSet
 from megastone.errors import MegastoneError
 
@@ -25,7 +25,7 @@ class ARMInstructionSet(InstructionSet):
 
 
 class ThumbInstructionSet(ARMInstructionSet):
-    def address_to_pointer(self, address):
+    def address_to_pointer(self, address: int):
         return address | PC_THUMB_MASK
 
 
@@ -53,13 +53,13 @@ class ARMArchitecture(Architecture):
         self.arm = arm_isa
         self.thumb = thumb_isa
 
-    def pointer_to_address(self, pointer):
+    def pointer_to_address(self, pointer: int):
         return pointer & ~PC_THUMB_MASK
 
-    def isa_from_pointer(self, pointer) -> InstructionSet:
+    def isa_from_pointer(self, pointer):
         return self._get_isa(pointer & 1)
 
-    def isa_from_regs(self, regs) -> InstructionSet:
+    def isa_from_regs(self, regs: BaseRegisterState):
         return self._get_isa(regs.cpsr & CPSR_THUMB_MASK)
 
     def _get_isa(self, thumb):

@@ -64,7 +64,7 @@ class Debugger(abc.ABC):
     def sp(self, value):
         self.regs.gen_sp = value
 
-    def jump(self, address, isa: InstructionSet=None):
+    def jump(self, address, isa: InstructionSet = None):
         """
         Set the program counter to the given address.
 
@@ -77,7 +77,7 @@ class Debugger(abc.ABC):
             address = isa.address_to_pointer(self.arch.pointer_to_address(address))
         self.pc = address
 
-    def run(self, count=None, *, address=None, isa: InstructionSet=None) -> StopReason:
+    def run(self, count=None, *, address=None, isa: InstructionSet = None) -> StopReason:
         """
         Resume execution.
 
@@ -231,7 +231,7 @@ class StackView:
     def __init__(self, dbg: Debugger):
         self._dbg = dbg
 
-    def get_address(self, index):
+    def get_address(self, index: int):
         """Return the address of the word at the given index."""
         return self._dbg.sp + index * self._dbg.arch.word_size
 
@@ -250,7 +250,7 @@ class StackView:
         self._dbg.sp -= self._dbg.arch.word_size
         self[0] = value
     
-    def pop(self):
+    def pop(self) -> int:
         """Pop a value from the stack and return it."""
         value = self[0]
         self._dbg.sp += self._dbg.arch.word_size

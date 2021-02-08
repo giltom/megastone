@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-import sys
 
 import unicorn
 
@@ -48,6 +47,7 @@ UC_ACCESS_TO_FAULT_CAUSE = {
     unicorn.UC_MEM_FETCH_PROT: FaultCause.PROTECTED
 }
 
+
 def perms_to_uc_prot(perms: AccessType):
     result = 0
     for atype, flag in ACCESS_TYPE_TO_UC_PROT.items():
@@ -61,7 +61,7 @@ class UnicornMemory(MappableMemory):
         super().__init__(arch)
         self._uc = uc
 
-    def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
+    def map(self, name, start, size, perms=AccessType.RWX):
         #Unicorn only supports mappings aligned to 0x1000
         end = start + size
         start = round_down(start, Emulator.PAGE_SIZE)
@@ -125,11 +125,6 @@ class Emulator(Debugger):
         emu.mem.load_memory(exe.mem)
         emu.jump(exe.entry)
         return emu
-
-    @staticmethod
-    def round_up(n):
-        """Return n rounded up to the emulator page size."""
-        return round_up(n, Emulator.PAGE_SIZE)
 
     def allocate_stack(self, size, *, name='stack', perms=AccessType.RWX):
         """Allocate a stack segment and set the SP to point to its top."""

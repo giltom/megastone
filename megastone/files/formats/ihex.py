@@ -21,7 +21,7 @@ class IHEXFormat(ExecFormat):
     arch - Architecture.
     entry - entry address (default - first address).
     """
-    def parse_fileobj(self, fileobj, *, arch, entry=None, **kwargs) -> IHEXFile:
+    def parse_fileobj(self, fileobj, *, arch, entry=None, **kwargs):
         binfile = bincopy.BinFile()
         binfile.add_ihex(fileobj.read().decode('UTF-8'))
 

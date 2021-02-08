@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import abc
-from megastone.errors import MegastoneError
-from megastone.arch.isa import InstructionSet
-from megastone.util import NamespaceMapping, round_up
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from dataclasses import dataclass
 import io
 import shutil
 
-from megastone.arch import Architecture
-from megastone.util import NamespaceMapping
+from megastone.arch import Architecture, InstructionSet
+from megastone.util import NamespaceMapping, round_up
+from megastone.errors import MegastoneError
 from .access import AccessType, Access
 from .errors import MemoryAccessError
 
@@ -171,7 +172,7 @@ class Memory(abc.ABC):
         with Path(path).open('wb') as fileobj:
             self.dump_to_fileobj(address, size, fileobj)
 
-    def search(self, start, size, value, *, alignment=1):
+    def search(self, start: int, size, value, *, alignment=1):
         """
         Search a memory range for the given value and return the address it was found at, or None if not found.
 
@@ -411,12 +412,12 @@ class SegmentMemory(Memory):
         return self.search_all(code, alignment=isa.insn_alignment, perms=AccessType.X)
 
     @abc.abstractmethod
-    def _get_all_segments(self):
+    def _get_all_segments(self) -> Iterable[Segment]:
         #Return an iterable of all segments
         pass
 
     @abc.abstractmethod
-    def _num_segments(self):
+    def _num_segments(self) -> int:
         pass
 
     def _get_segment_by_name(self, name):
@@ -434,16 +435,16 @@ class SegmentMemory(Memory):
         raise KeyError(f'No segment contains address 0x{address:X}')
 
 
-class SegmentMapping(NamespaceMapping):
+class SegmentMapping(NamespaceMapping[Segment]):
     """Helper class used to access segments."""
 
     def __init__(self, mem: SegmentMemory):
         self._mem = mem
 
-    def __getitem__(self, key) -> Segment:
+    def __getitem__(self, key):
         return self._mem._get_segment_by_name(key)
 
-    def by_address(self, address) -> Segment:
+    def by_address(self, address):
         """Return the segment that contains the given address."""
         return self._mem._get_segment_by_address(address)
 
@@ -472,7 +473,7 @@ class DictSegmentMemory(SegmentMemory):
 
     def __init__(self, arch: Architecture):
         super().__init__(arch)
-        self._segments = {} #name => Segment. Subclass should call _add_segment to initialize this
+        self._segments: dict[str, Segment] = {}
 
     def _get_all_segments(self):
         return self._segments.values()
@@ -483,7 +484,7 @@ class DictSegmentMemory(SegmentMemory):
     def _get_segment_by_name(self, name):
         return self._segments[name]
 
-    def _add_segment(self, seg):
+    def _add_segment(self, seg: Segment):
         #Call in a subclass to initialize segments
         if seg.name in self._segments:
             raise MegastoneError(f'Segment with name "{seg.name}" already exists')
@@ -508,13 +509,13 @@ class MappableMemory(DictSegmentMemory):
         """
         #Implementation should call _add_segment() and also do any other needed maintenance....
 
-    def load(self, name, address, data, perms=AccessType.RWX) -> Segment:
+    def load(self, name, address, data, perms=AccessType.RWX):
         """Shorthand for map() followed by write()."""
         seg = self.map(name, address, len(data), perms)
         seg.write(data)
         return seg
     
-    def load_file(self, name, address, path, perms=AccessType.RWX) -> Segment:
+    def load_file(self, name, address, path, perms=AccessType.RWX):
         """Load the file at the given path."""
         #Currently we read the entire file at once bc we need to know the file size in advance
         #If performance becomes a problem this can be improved by using seek() and write_fileobj()
@@ -526,7 +527,7 @@ class MappableMemory(DictSegmentMemory):
         for seg in mem.segments:
             self.load(seg.name, seg.start, seg.read(), seg.perms)
 
-    def allocate(self, name, size, perms=AccessType.RWX) -> Segment:
+    def allocate(self, name, size, perms=AccessType.RWX):
         """Automatically allocate a new segment in an unused region."""
         address = max([*(seg.end for seg in self.segments), MIN_ALLOC_ADDRESS])
         address = round_up(address, ALLOC_ROUND_SIZE)

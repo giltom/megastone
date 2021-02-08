@@ -1,4 +1,8 @@
 import abc
+from typing import TypeVar, Generic
+
+
+T = TypeVar('T')
 
 
 def parse_hex_int(s):
@@ -26,14 +30,14 @@ def size_to_mask(size):
     return bits_to_mask(size * 8)
 
 
-class NamespaceMapping(abc.ABC):
+class NamespaceMapping(abc.ABC, Generic[T]):
     """Basic mapping type that supports access by both index and attribute."""
 
     @abc.abstractmethod
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> T:
         pass
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr) -> T:
         try:
             return self[attr]
         except KeyError as e:

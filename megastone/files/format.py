@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from pathlib import Path
 import io
 import abc
+from collections.abc import Iterable
 
 from megastone.db import DatabaseEntry
 from .execfile import ExecFile
@@ -11,9 +14,9 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
 
     def __init__(self, *, 
         name: str,
-        alt_names: tuple = (),
+        alt_names: Iterable[str] = (),
         magic: bytes = None, #Magic bytes for autodetection. If None, won't be autodetected.
-        extensions: tuple = () #list of file extensions including '.'
+        extensions: Iterable[str] = () #list of file extensions including '.'
     ):
         super().__init__(name, alt_names)
         self.magic = magic

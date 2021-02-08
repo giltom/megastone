@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import enum
 import platform
+from collections.abc import Iterable
 
 import unicorn
 
@@ -17,7 +20,7 @@ class Endian(enum.Enum):
         """Convert bytes to int in this endian"""
         return int.from_bytes(data, self.value, signed=signed)
     
-    def encode_int(self, value, size):
+    def encode_int(self, value: int, size):
         """Convert int to bytes in this endian"""
         if value < 0:
             value = value & size_to_mask(size)
@@ -34,10 +37,10 @@ class Architecture(DatabaseEntry):
 
     def __init__(self, *, 
         name: str,
-        alt_names: tuple = (),                   #List of alternate names recognized by by_name().
+        alt_names: Iterable[str] = (),                   #List of alternate names recognized by by_name().
         bits: int,                               #Number of bits in a word
         endian: Endian,
-        isas: tuple,                             #List of instruction sets. The first one will be the default. Most arches have only one.
+        isas: Iterable[InstructionSet],                             #List of instruction sets. The first one will be the default. Most arches have only one.
         regs: RegisterSet = None,                #Register set (can be None if disassembly and emulation aren't supported)
         pc_name: str = None,                 #Program counter register
         sp_name: str = None,                 #Stack pointer register
@@ -59,20 +62,23 @@ class Architecture(DatabaseEntry):
         self.uc_arch = uc_arch
         self.uc_mode = uc_mode
 
+        for isa in self.isas:
+            isa.arch = self
+
     @staticmethod
     def native():
         """Return the native Architecture of this machine."""
         return Architecture.by_name(platform.machine())
 
     @property
-    def isa(self) -> InstructionSet:
+    def isa(self):
         """The Architecture's single ISA. Raises AttributeError if there is more than one ISA."""
         if len(self.isas) > 1:
             raise AttributeError('Arch has multiple ISAs')
         return self.isas[0]
 
     @property
-    def default_isa(self) -> InstructionSet:
+    def default_isa(self):
         """Return the default ISA."""
         return self.isas[0]
 
@@ -112,11 +118,11 @@ class Architecture(DatabaseEntry):
         """Convert a pointer to a code address (relevant for thumb)."""
         return pointer
 
-    def isa_from_pointer(self, address) -> InstructionSet:
+    def isa_from_pointer(self, address):
         """Try to determine the current ISA from an address."""
         return self.isa
 
-    def isa_from_regs(self, regs: BaseRegisterState) -> InstructionSet:
+    def isa_from_regs(self, regs: BaseRegisterState):
         """Determine the current ISA from a BaseRegisterState."""
         return self.isa
 
@@ -126,7 +132,7 @@ class SimpleArchitecture(Architecture):
     
     def __init__(self, *,
         name: str,
-        alt_names: tuple = (),
+        alt_names: Iterable[str] = (),
         bits: int,
         endian: Endian,
         regs: RegisterSet = None, 

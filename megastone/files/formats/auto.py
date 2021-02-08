@@ -33,7 +33,7 @@ class AutoFormat(ExecFormat):
         magic = fileobj.read(MAX_MAGIC_SIZE)
         return ExecFormat.by_magic(magic)
 
-    def _fix_format(self, fmt):
+    def _fix_format(self, fmt: ExecFormat) -> ExecFormat:
         if fmt is None:
             warning('Assuming raw binary file')
             return FORMAT_BINARY

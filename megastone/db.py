@@ -1,4 +1,13 @@
+from __future__ import annotations
+
+from collections.abc import Iterable, Generator
+from typing import TypeVar, Type
+
 from megastone.errors import NotFoundError
+
+
+T = TypeVar('T', bound='DatabaseEntry')
+
 
 class DatabaseEntry:
     """
@@ -17,7 +26,7 @@ class DatabaseEntry:
         cls._instances.append(instance)
 
     @classmethod
-    def by_name(cls, name):
+    def by_name(cls: Type[T], name) -> T:
         """Return the instance with the given name or alt name."""
         name = name.lower()
         for instance in cls._instances:
@@ -26,17 +35,17 @@ class DatabaseEntry:
         raise NotFoundError(f'Unknown {cls.__name__} "{name}"')
 
     @classmethod
-    def all(cls):
+    def all(cls: Type[T]) -> Generator[T]:
         """Return an iterable of all registered instances."""
         yield from cls._instances
     
     @classmethod
-    def all_names(cls):
+    def all_names(cls) -> Generator[str]:
         """Return an interable of all names of registered instances."""
         for instance in cls.all():
             yield instance.name
 
-    def __init__(self, name, alt_names=()):
+    def __init__(self, name: str, alt_names: Iterable[str] = ()):
         self.name = name
         self.alt_names = list(alt_names)
         

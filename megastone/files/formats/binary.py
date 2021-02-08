@@ -25,7 +25,7 @@ class BinaryFormat(ExecFormat):
     base - base address (default 0).
     entry - entry address (default - base address).
     """
-    def parse_fileobj(self, fileobj, *, arch, base=0, entry=None, **kwargs) -> BinaryFile:
+    def parse_fileobj(self, fileobj, *, arch, base=0, entry=None, **kwargs):
         if entry is None:
             entry = base
 
