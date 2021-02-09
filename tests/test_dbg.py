@@ -1,9 +1,8 @@
-from megastone.debug.errors import CPUError
 import pytest
 
 from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
     StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, Access, FaultCause,
-    ARCH_X86)
+    ARCH_X86, CPUError)
 
 
 CODE_ADDRESS = 0x1000

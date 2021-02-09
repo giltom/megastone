@@ -1,7 +1,7 @@
 import pytest
 
 
-from megastone import Emulator, ARCH_ARM, MemoryAccessError, Access, AccessType, MegastoneWarning, BufferMemory, FORMAT_BINARY
+from megastone import Emulator, ARCH_ARM, MemoryAccessError, Access, AccessType, BufferMemory, FORMAT_BINARY
 
 
 @pytest.fixture

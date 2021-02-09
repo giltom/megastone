@@ -1,9 +1,8 @@
-from megastone.mem.memory import MappableMemory
 import pytest
 import io
 
 
-from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError
+from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError, MappableMemory
 
 from .conftest import TEMP_FILE_DATA
 

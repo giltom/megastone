@@ -1,5 +1,5 @@
 from megastone.errors import MegastoneError
-from .memory import MappableMemory, SplittingSegmentMemory, Segment
+from .segments import MappableMemory, SplittingSegmentMemory, Segment
 from .access import AccessType
 
 

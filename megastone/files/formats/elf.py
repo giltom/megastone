@@ -5,7 +5,8 @@ from elftools.elf.constants import P_FLAGS, SH_FLAGS
 
 from ..execfile import ExecFile
 from ..format import ExecFormat
-from megastone.mem import Access, AccessType, Segment, SplittingSegmentMemory, DictSegmentMemory, MemoryAccessError
+from megastone.mem import Access, AccessType, Segment, MemoryAccessError
+from megastone.mem.segments import SplittingSegmentMemory, DictSegmentMemory
 from megastone.arch import Architecture
 from megastone.errors import UnsupportedError
 
