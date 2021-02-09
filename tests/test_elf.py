@@ -98,12 +98,10 @@ def test_patch_magic(elf, elf_data, magic_address):
 def test_patch_error(elf):
     address = 0x41014E
     data = b'12345'
-    bss_offset = 2
 
     with pytest.raises(MemoryAccessError) as info:
         elf.mem.write(address, data)
     assert 'ELF' in str(info.value)
-    assert info.value.access == Access(AccessType.W, address+bss_offset, len(data)-bss_offset, data[bss_offset:])
 
 def test_emu(seg_elf):
     emu = Emulator.from_execfile(seg_elf)

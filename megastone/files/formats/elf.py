@@ -107,17 +107,7 @@ class BaseELFMemory(DictSegmentMemory, SplittingSegmentMemory):
     def _write_segment(self, segment: BaseELFSegment, offset, data):
         end_offset = offset + len(data)
         if end_offset > segment.file_size:
-            error_size = end_offset - segment.file_size
-            raise MemoryAccessError(
-                Access(
-                    type=AccessType.W,
-                    address=segment.address + segment.file_size,
-                    size=error_size,
-                    value=data[-error_size:]
-                ),
-                'memory region is not in the physical ELF file'
-            )
-
+            self._raise_write_error(segment.address + offset, data, 'memory region is not in the physical ELF file')
         self._buffer[segment.file_offset + offset : segment.file_offset + end_offset] = data
 
 
@@ -153,7 +143,7 @@ def parse_elf_symbols(elf: elffile.ELFFile):
     symbols = {}
     for section in get_symtab_sections(elf):
         for sym in section.iter_symbols():
-            if sym.name is not None:
+            if sym.name:
                 symbols[sym.name] = sym['st_value']
     return symbols
 

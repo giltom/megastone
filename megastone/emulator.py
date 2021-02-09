@@ -79,13 +79,13 @@ class UnicornMemory(MappableMemory):
         try:
             return bytes(self._uc.mem_read(address, size))
         except unicorn.UcError as e:
-            raise MemoryAccessError(Access(AccessType.R, address, size), str(e))
+            self._raise_read_error(address, size, str(e))
 
     def _write(self, address, data):
         try:
             self._uc.mem_write(address, data)
         except unicorn.UcError as e:
-            raise MemoryAccessError(Access(AccessType.W, address, len(data), data), str(e))
+            self._raise_write_error(address, data, str(e))
 
     def _init_mapping(self, start, size, perms):
         if size == 0:

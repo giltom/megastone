@@ -7,7 +7,7 @@ import shutil
 from megastone.arch import Architecture, InstructionSet, DisassemblyError
 from .errors import MemoryAccessError
 from .memory_io import StreamMemoryIO, MemoryIO
-
+from .access import AccessType, Access
 
 
 class Memory(abc.ABC):
@@ -283,6 +283,16 @@ class Memory(abc.ABC):
             raise ValueError('Unexpected data length for slice write')
         self.write(key.start, value)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self):
+        """Perform any neede cleanup."""
+        pass
+
     def _check_slice(self, key):
         if not isinstance(key, slice):
             raise TypeError('Invalid key type')
@@ -299,4 +309,9 @@ class Memory(abc.ABC):
     def _get_max_read_size(self, address):
         #Return maximum amount of bytes that can be read from address, or None if not known
         return None
-        
+    
+    def _raise_read_error(self, address, size, reason):
+        raise MemoryAccessError(Access(AccessType.R, address, size), reason) from None
+
+    def _raise_write_error(self, address, data, reason):
+        raise MemoryAccessError(Access(AccessType.W, address, len(data), data), reason) from None

@@ -104,9 +104,9 @@ class SegmentMemory(Memory):
         #Return an iterable of all segments
         pass
 
-    @abc.abstractmethod
-    def _num_segments(self) -> int:
-        pass
+    def _num_segments(self):
+        #Override if more efficient implementation is available
+        return sum(1 for _ in self._get_all_segments())
 
     def _get_segment_by_name(self, name):
         #Override if more efficient implementation is available
@@ -260,31 +260,34 @@ class SplittingSegmentMemory(SegmentMemory):
         """Write data to the given segment at the given offset"""
 
     def _read(self, address, size):
-        return b''.join(
-            self._read_segment(seg, start, size)
-            for seg, start, size in
-            self._get_data_offsets(address, size, AccessType.R)
-        )
+        try:
+            return b''.join(
+                self._read_segment(seg, start, size)
+                for seg, start, size in
+                self._get_data_offsets(address, size)
+            )
+        except KeyError:
+            self._raise_read_error(address, size, 'unmapped')
 
     def _write(self, address, data):
         offset = 0
-        offsets = self._get_data_offsets(address, len(data), AccessType.W, data)
-        for seg, start, size in list(offsets): #we call list() to detect any errors before starting to write
+        #we call list() to detect any errors before starting to write
+        try:
+            offsets = list(self._get_data_offsets(address, len(data)))
+        except KeyError:
+            self._raise_write_error(address, data, 'unmapped')
+        for seg, start, size in offsets: 
             self._write_segment(seg, start, data[offset : offset + size])
             offset += size
 
-    def _get_data_offsets(self, address, size, atype, avalue=None):
+    def _get_data_offsets(self, address, size):
         #We need to deal with the case of a read/write that spans two adjacent segments
         #This function yields segment, start_offset, size containing given address range
         curr_address = address
         end_address = address + size
 
         while curr_address < end_address:
-            try:
-                seg = self.segments.by_address(curr_address)
-            except KeyError as e:
-                raise MemoryAccessError(Access(atype, address, size, avalue), 'unmapped') from e
-
+            seg = self.segments.by_address(curr_address)
             start_offset = curr_address - seg.start
             end_offset = min(end_address - seg.start, seg.size)
             yield seg, start_offset, end_offset - start_offset

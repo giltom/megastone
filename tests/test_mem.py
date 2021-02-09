@@ -242,4 +242,7 @@ def test_rw_adjacent(mem: MappableMemory):
     assert mem.read(address, len(data1)) == data1
     assert mem.read(SEG_ADDRESS + SEG_SIZE, len(data2)) == data2
     assert mem.read(address, len(data)) == data
-    
+
+def test_context(mem):
+    with mem as other_mem:
+        assert mem is other_mem
