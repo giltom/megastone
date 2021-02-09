@@ -143,18 +143,19 @@ def convert_flags(mapping, flags):
     return result
 
 
-def get_symtab_section(elf: elffile.ELFFile):
+def get_symtab_sections(elf: elffile.ELFFile):
     for section in elf.iter_sections():
         if isinstance(section, elffile.SymbolTableSection):
-            return section
-    return None
+            yield section
 
 
 def parse_elf_symbols(elf: elffile.ELFFile):
-    section = get_symtab_section(elf)
-    if section is None:
-        return {}
-    return {sym.name: sym['st_value'] for sym in section.iter_symbols() if sym.name is not None}
+    symbols = {}
+    for section in get_symtab_sections(elf):
+        for sym in section.iter_symbols():
+            if sym.name is not None:
+                symbols[sym.name] = sym['st_value']
+    return symbols
 
 
 class ELFFormat(ExecFormat):
