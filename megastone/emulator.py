@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 import unicorn
 
 from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
-from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError
+from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError, AddressRange
 from megastone.arch import Architecture, Register
 from megastone.util import round_up, round_down
-from megastone.errors import UnsupportedError
+from megastone.errors import UnsupportedError, warning
 from megastone.files import ExecFile
 
 
@@ -56,6 +59,14 @@ def perms_to_uc_prot(perms: AccessType):
     return result
 
 
+def uc_prot_to_perms(uc_prot: int):
+    result = AccessType.NONE
+    for atype, flag in ACCESS_TYPE_TO_UC_PROT.items():
+        if uc_prot & flag:
+            result |= atype
+    return result
+
+
 class UnicornMemory(MappableMemory):
     def __init__(self, arch, uc: unicorn.Uc):
         super().__init__(arch)
@@ -63,14 +74,9 @@ class UnicornMemory(MappableMemory):
 
     def map(self, name, start, size, perms=AccessType.RWX):
         #Unicorn only supports mappings aligned to 0x1000
-        end = start + size
-        start = round_down(start, Emulator.PAGE_SIZE)
-        end = round_up(end, Emulator.PAGE_SIZE)
-        size = end - start
-
         seg = Segment(name, start, size, perms, self)
         self._add_segment(seg)
-        self._uc.mem_map(start, size, perms_to_uc_prot(perms))
+        self._init_mapping(start, size, perms)
         return seg
 
     def _read(self, address, size):
@@ -85,11 +91,53 @@ class UnicornMemory(MappableMemory):
         except unicorn.UcError as e:
             raise MemoryAccessError(Access(AccessType.W, address, len(data), data), str(e))
 
+    def _init_mapping(self, start, size, perms):
+        if size == 0:
+            return
+
+        end = start + size
+        start = round_down(start, Emulator.PAGE_SIZE)
+        end = round_up(end, Emulator.PAGE_SIZE)
+        first_page = start
+        last_page = end - Emulator.PAGE_SIZE
+        uc_prot = perms_to_uc_prot(perms)
+
+        #Segments can't overlap anyway, so we only need to check the first and last pages
+        
+        start_prot = self._get_uc_prot(first_page)
+        if start_prot is not None:
+            self._adjust_page(first_page, start_prot, uc_prot)
+            start += Emulator.PAGE_SIZE
+
+        if last_page != first_page:
+            end_prot = self._get_uc_prot(last_page)
+            if end_prot is not None:
+                self._adjust_page(last_page, end_prot, uc_prot)
+                end -= Emulator.PAGE_SIZE
+
+        if start < end:
+            self._uc.mem_map(start, end - start, uc_prot)
+
+    def _adjust_page(self, page, old_prot, new_prot):
+        if old_prot == new_prot:
+            return
+        
+        comb_prot = old_prot | new_prot
+        atype = uc_prot_to_perms(comb_prot)
+        warning(f'Page at 0x{page:X} will have permissions {atype.name} due to overlap')
+        self._uc.mem_protect(page, Emulator.PAGE_SIZE, comb_prot)
+
+    def _get_uc_prot(self, address):
+        for start, end, prot in self._uc.mem_regions():
+            if start <= address < end:
+                return prot
+        return None
+
 
 class Emulator(Debugger):
     """Emulator based on the Unicorn engine. Implements the full Debugger interface."""
 
-    mem: MappableMemory
+    mem: UnicornMemory
 
     PAGE_SIZE = 0x1000
 

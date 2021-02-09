@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType, Access, MemoryAccessError, Emulator
+from megastone import FORMAT_ELF, ARCH_MIPS, FORMAT_AUTO, AccessType, Access, MemoryAccessError, Emulator, MegastoneWarning
 
 
 PATH = Path(__file__).parent / 'files/mips_test'
@@ -109,4 +109,16 @@ def test_emu(seg_elf):
     emu = Emulator.from_execfile(seg_elf)
     assert emu.arch == ARCH_MIPS
     assert emu.pc == seg_elf.symbols['__start']
+    assert emu.curr_insn.mnemonic == 'add'
+
+def test_emu_sec(sec_elf):
+    return
+    with pytest.warns(MegastoneWarning) as records:
+        emu = Emulator.from_execfile(sec_elf)
+    assert len(records) == 1
+    assert '0x400000' in records[0].message.args[0]
+    assert ' RX ' in records[0].message.args[0]
+    
+    assert emu.arch == ARCH_MIPS
+    assert emu.pc == sec_elf.symbols['__start']
     assert emu.curr_insn.mnemonic == 'add'

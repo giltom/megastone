@@ -162,7 +162,7 @@ class ELFFormat(ExecFormat):
         elf = elffile.ELFFile(fileobj)
         entry = elf['e_entry']
         symbols = parse_elf_symbols(elf)
-        if use_segments:
+        if use_segments or elf.num_sections() == 0:
             mem = SegmentELFMemory(elf)
         else:
             mem = SectionELFMemory(elf)
