@@ -1,5 +1,6 @@
 import abc
 from typing import TypeVar, Generic
+import functools
 
 
 T = TypeVar('T')

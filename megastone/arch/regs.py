@@ -25,6 +25,9 @@ class Register:
     def __repr__(self):
         return f"<Register '{self.name}'>"
 
+    def __str__(self):
+        return self.name
+
 
 def _reg_ids_from_module(module, prefix):
     reg_ids = {}
@@ -42,10 +45,10 @@ class RegisterSet(NamespaceMapping[Register]):
 
     def __init__(self, registers):
         """Initialize a new register set with the given Registers"""
-        self._regs = {}
+        self._regs: dict[str, Register] = {}
         for reg in registers:
             self._regs[reg.name] = reg
-    
+
     @classmethod
     def from_libs(cls, arch_name):
         """
@@ -87,7 +90,7 @@ class RegisterSet(NamespaceMapping[Register]):
     def __len__(self):
         return len(self._regs)
     
-    def __getitem__(self, key) -> Register:
+    def __getitem__(self, key):
         return self._regs[key]
 
     def has_reg_name(self, name):

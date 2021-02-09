@@ -1,86 +1,281 @@
 import pytest
+import dataclasses
 
 import megastone as ms
 
 
-FAKE_CHUNK_SIZE = 0x20
-SEG_ADDRESS = 0x2000
-SEG_SIZE = FAKE_CHUNK_SIZE * 2 + 1
 
+def test_armthumb_add(arm_isa: ms.InstructionSet):
+    insn = arm_isa.parse_instruction('add r0, r1, r2')
 
-@pytest.fixture
-def num_nops(nop):
-    return SEG_SIZE // len(nop)
+    assert not insn.is_jump
+    assert not insn.is_call
+    assert not insn.is_ret
+    assert not insn.is_iret
+    assert not insn.is_interrupt
+    assert not insn.is_relative
+    assert not insn.is_absolute
+    assert not insn.is_privileged
 
-def dummy(*args):
-    return None
+    assert len(insn.operands) == insn.num_operands == 3
+    assert insn.operands[0].reg == 'r0'
+    assert insn.operands[1].reg == 'r1'
+    assert insn.operands[2].reg == 'r2'
 
-@pytest.fixture(params=[True, False])
-def mem(request, monkeypatch, arch, isa, nop, num_nops):
-    mem = ms.BufferMemory(arch)
-    mem.default_isa = isa
-    seg = mem.map('seg', SEG_ADDRESS, SEG_SIZE)
-    seg.write(nop * num_nops)
+    assert insn.regs_read == ['r1', 'r2']
+    assert insn.regs_written == ['r0']
+    assert insn.regs_accessed == ['r0', 'r1', 'r2']
 
-    monkeypatch.setattr(mem, 'DISASSEMBLY_CHUNK_SIZE', FAKE_CHUNK_SIZE)
-    if request.param:
-        monkeypatch.setattr(mem, '_get_max_read_size', dummy)
+    assert insn.bytes == arm_isa.assemble('add r0, r1, r2')
 
-    return mem
+    for i, op in enumerate(insn.operands):
+        assert op.is_reg
+        assert not op.is_immediate
+        assert not op.is_memory
+        assert op.index == i
 
-@pytest.fixture(params=[None, 3, FAKE_CHUNK_SIZE + 3, 0x30000])
-def count(request):
-    return request.param
+def test_armthumb_b(arm_isa: ms.InstructionSet):
+    insn = arm_isa.parse_instruction('B 0x1000')
 
-@pytest.fixture
-def real_count(count, num_nops):
-    if count is None or count > num_nops:
-        return num_nops
-    return count
+    assert insn.is_jump
+    assert not insn.is_call
+    assert insn.is_relative
 
-@pytest.fixture
-def disassembly(mem, count):
-    return list(mem.disassemble(SEG_ADDRESS, max_num=count))
+    assert insn.num_operands == 1
+    assert insn.operands[0].is_immediate
+    assert insn.operands[0].value == 0x1000
 
-def test_insns(disassembly, nop, real_count):
-    assert len(disassembly) == real_count
-    for i, insn in enumerate(disassembly):
-        assert insn.address == SEG_ADDRESS + i * len(nop)
-        assert insn.mnemonic == 'nop'
+def test_armthumb_blx(arm_isa: ms.InstructionSet):
+    insn = arm_isa.parse_instruction('BLX R0')
 
-def test_invalid(arch, mem, nop):
-    if arch is ms.ARCH_MIPS64:
-        return
+    assert insn.is_call
+    assert insn.is_absolute
 
-    length = 2
-    mem.write(SEG_ADDRESS + length * len(nop), b'\xFF\xFF\xFF\xFF')
+    assert insn.num_operands == 1
+    assert insn.operands[0].reg == 'r0'
+    assert insn.operands[0].is_reg
 
-    assert len(list(mem.disassemble(SEG_ADDRESS))) == 2
-    assert len(list(mem.disassemble(SEG_ADDRESS, max_num=3))) == 2
+def test_armthumb_mem(arm_isa: ms.InstructionSet):
+    insn = arm_isa.parse_instruction('LDR R0, [R1, #-4]')
 
-def test_disasm_seg(mem, num_nops):
-    assert len(list(mem.segments.seg.disassemble())) == num_nops
+    assert insn.num_operands == 2
+    assert insn.operands[0].reg == 'r0'
 
-def test_switch_isa(mem, isa):
-    if isa is not ms.ISA_THUMB:
-        return
+    op = insn.operands[1]
+    assert op.is_memory
+    assert op.base_reg == 'r1'
+    assert op.index_reg is None
+    assert op.scale == 1
+    assert op.offset == -4
 
-    mem.default_isa = ms.ISA_ARM
-    assert mem.disassemble_one(SEG_ADDRESS).mnemonic != 'nop'
-    assert mem.disassemble_one(SEG_ADDRESS, isa=ms.ISA_THUMB).mnemonic == 'nop'
+def test_armthumb_mem_index(arm_isa: ms.InstructionSet):
+    insn = arm_isa.parse_instruction('LDR R1, [R2, R3]')
 
-@pytest.mark.parametrize(argnames=['num_insns'], argvalues=[[0], [3]])
-def test_error(mem, arch, nop, num_insns):
-    if arch is ms.ARCH_MIPS64:
-        return
+    assert insn.num_operands == 2
 
-    patch_address = SEG_ADDRESS + num_insns * len(nop)
-    mem.write(patch_address, b'\xFF\xFF\xFF\xFF')
+    op = insn.operands[1]
+    assert op.base_reg == 'r2'
+    assert op.index_reg == 'r3'
+    assert op.scale == 1
+    assert op.offset == 0
+    assert str(op) == 'r2 + r3'
 
-    with pytest.raises(ms.DisassemblyError) as info:
-        mem.disassemble_n(SEG_ADDRESS, 4)
-    assert hex(patch_address) in str(info.value).lower()
+def test_armthumb_svc(arm_isa):
+    assert arm_isa.parse_instruction('svc #40').is_interrupt
 
-def test_disasm_bad(mem):
-    with pytest.raises(ms.MemoryAccessError) as info:
-        mem.disassemble_one(0x20)
+def test_armthumb_priv(arm_isa):
+    assert arm_isa.parse_instruction('MCR p15, 0, r0, c0, c0, 0').is_privileged
+
+def test_armthumb_sp(arm_isa):
+    insn = arm_isa.parse_instruction('SUB SP, #12')
+
+    assert insn.operands[0].reg == 'sp'
+
+def test_armthumb_pc():
+    insn = ms.ISA_ARM.parse_instruction('LDR PC, =0x2000')
+
+    assert insn.operands[0].reg == 'pc'
+    assert insn.operands[1].base_reg == 'pc'
+
+def test_x86_add():
+    insn = ms.ISA_X86.parse_instruction('add eax, ebx')
+
+    assert insn.num_operands == 2
+    assert insn.operands[0].reg == 'eax'
+    assert insn.operands[1].reg == 'ebx'
+
+    assert insn.regs_written == ['eax', 'eflags']
+    assert insn.regs_read == ['eax', 'ebx']
+
+def test_x86_jmp():
+    insn = ms.ISA_X86.parse_instruction('jmp 0x1000')
+
+    assert insn.is_jump
+    assert insn.is_relative
+    assert not insn.is_call
+    
+    assert insn.num_operands == 1
+    assert insn.operands[0].value == 0x1000
+
+def test_x86_call():
+    insn = ms.ISA_X86_16.parse_instruction('call 0x300')
+
+    assert insn.is_call
+    assert insn.is_relative
+    assert not insn.is_jump
+
+def test_x86_jmp_reg():
+    insn = ms.ISA_X86_64.parse_instruction('call rax')
+
+    assert insn.is_call
+    assert insn.is_absolute
+
+    assert insn.num_operands == 1
+    assert insn.operands[0].reg == 'rax'
+
+def test_x86_ret():
+    assert ms.ISA_X86_64.parse_instruction('ret').is_ret
+
+def test_x86_iret():
+    assert ms.ISA_X86.parse_instruction('iret').is_iret
+
+def test_x86_syscall():
+    assert ms.ISA_X86_64.parse_instruction('syscall').is_interrupt
+
+def test_x86_mem():
+    insn = ms.ISA_X86_64.parse_instruction('mov rax, [rbx + 2*rcx + 0x80]')
+
+    assert insn.num_operands == 2
+
+    op = insn.operands[1]
+    assert op.base_reg == 'rbx'
+    assert op.index_reg == 'rcx'
+    assert op.scale == 2
+    assert op.offset == 0x80
+
+    assert str(op) == 'rbx + 2*rcx + 0x80'
+    assert repr(op) == "<MemoryOperand(base_reg='rbx', index_reg='rcx', scale=2, offset=0x80)"
+
+def test_x86_direct():
+    insn = ms.ISA_X86.parse_instruction('mov eax, dword ptr [0x8000]')
+
+    assert insn.num_operands == 2
+
+    op = insn.operands[1]
+    assert op.is_direct
+    assert op.offset == 0x8000
+    assert op.base_reg is None
+    assert op.index_reg is None
+    assert op.scale == 1
+    
+    assert str(op) == '0x8000'
+    assert repr(op) == "<MemoryOperand(offset=0x8000)"
+
+def test_arm64_add():
+    insn = ms.ISA_ARM64.parse_instruction('ADD X0, X1, X2')
+
+    for i, op in enumerate(insn.operands):
+        assert op.reg == f'x{i}'
+
+def test_arm64_ret():
+    assert ms.ISA_ARM64.parse_instruction('RET').is_ret
+
+def test_arm64_b():
+    insn = ms.ISA_ARM64.parse_instruction('B 0x1000')
+
+    assert insn.is_jump and insn.is_relative
+    assert not insn.is_call
+    assert insn.num_operands == 1
+    assert insn.operands[0].value == 0x1000
+
+def test_arm64_mem():
+    insn = ms.ISA_ARM64.parse_instruction('LDR X0, [X1, X2]')
+
+    op = insn.operands[1]
+    assert op.base_reg == 'x1'
+    assert op.index_reg == 'x2'
+
+def test_arm64_sp():
+    insn = ms.ISA_ARM64.parse_instruction('MOV X0, SP')
+    assert insn.operands[1].reg == 'sp'
+
+def test_arm64_lr():
+    assert ms.ISA_ARM64.parse_instruction('MOV X0, LR').operands[1].reg == 'x30'
+
+@pytest.mark.xfail(reason="Unicorn doesn't recognize ARM64 calls properly")
+def test_arm64_call():
+    insn = ms.ISA_ARM64.parse_instruction('BL 0x1000')
+
+    assert insn.is_call
+
+def test_mips_add():
+    insn = ms.ISA_MIPS.parse_instruction('add $t0, $t1, $t2')
+
+    assert insn.num_operands == 3
+    for i, op in enumerate(insn.operands):
+        assert op.reg == f't{i}'
+        assert str(op) == f't{i}'
+        assert f"'t{i}'" in repr(op)
+
+def test_mips_immediate():
+    insn = ms.ISA_MIPS.parse_instruction('lui $v0, 100')
+
+    assert insn.num_operands == 2
+    assert insn.operands[0].reg == 'v0'
+    assert insn.operands[1].value == 100
+
+    assert str(insn.operands[1]) == hex(100)
+    assert int(insn.operands[1]) == 100
+    assert hex(100) in repr(insn.operands[1])
+
+def test_mips_mem():
+    insn = ms.ISA_MIPS.parse_instruction('sw $a0, 0x8($sp)')
+
+    assert insn.num_operands == 2
+    assert insn.operands[0].reg == 'a0'
+
+    op = insn.operands[1]
+    assert op.base_reg == 'sp'
+    assert op.index_reg is None
+    assert op.offset == 0x8
+    assert op.scale == 1
+    assert str(op) == 'sp + 0x8'
+
+def test_mips_j():
+    insn = ms.ISA_MIPS.parse_instruction('j 0x8000')
+
+    assert insn.num_operands == 1
+    assert insn.is_jump and insn.is_absolute
+    assert insn.operands[0].value == 0x8000
+
+@pytest.mark.xfail(reason="Unicorn doesn't recognize MIPS jal properly")
+def test_mips_jal():
+    insn = ms.ISA_MIPS.parse_instruction('jal 0x8000')
+
+    assert insn.is_jump or insn.is_call
+
+def test_mips_beq():
+    insn = ms.ISA_MIPS.parse_instruction('beq $t1, $t2, 0x800')
+
+    assert insn.is_jump
+    assert insn.is_relative
+    assert insn.operands[2].value == 0x800
+
+def test_insn_eq():
+    insns = [ms.ISA_MIPS64.parse_instruction('move $t2, $t3') for _ in range(2)]
+
+    assert insns[0] == insns[1]
+    assert hash(insns[0]) == hash(insns[1])
+    assert insns[0] != 4
+
+def test_groups():
+    insn = ms.ISA_THUMB.parse_instruction('SUB R1, R2, R3')
+
+    assert insn.groups == ['thumb2']
+
+def test_unknown_op():
+    insn = ms.ISA_ARM.parse_instruction('MRC p15, 0, r0, c1, c2, 3')
+
+    assert insn.num_operands == 6
+    assert insn.operands[0].type == ms.OperandType.OTHER
+    assert 'OTHER' in repr(insn.operands[0])

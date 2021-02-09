@@ -8,6 +8,7 @@ import capstone
 
 from megastone.db import DatabaseEntry
 from megastone.errors import MegastoneError
+from .disasm import Instruction
 
 
 if typing.TYPE_CHECKING:
@@ -81,7 +82,7 @@ class InstructionSet(DatabaseEntry):
             raise AssemblyError('Invalid assembly')
         return data
 
-    def disassemble(self, code, address=0, *, count=None) -> Generator[capstone.CsInsn]:
+    def disassemble(self, code, address=0, *, count=None):
         """
         Disassemble the given machine code and yield assembly instructions.
         Assembly will stop at an invalid instruction.
@@ -94,7 +95,8 @@ class InstructionSet(DatabaseEntry):
         if count is None:
             count = 0
         try:
-            yield from self._cs.disasm(code, offset=address, count=count)
+            for insn in self._cs.disasm(code, offset=address, count=count):
+                yield Instruction(insn)
         except capstone.CsError as e:
             raise DisassemblyError(f'Failed to disassemble: {str(e)}') from e
 
@@ -108,6 +110,10 @@ class InstructionSet(DatabaseEntry):
         if len(result) == 0:
             raise DisassemblyError('Invalid instruction')
         return result[0]
+
+    def parse_instruction(self, string, address=0):
+        """Parse an instruction from a string and return an Instruction."""
+        return self.disassemble_one(self.assemble(string, address))
 
     def address_to_pointer(self, address):
         """Convert a code address to a pointer (relevant for thumb)."""
