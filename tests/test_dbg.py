@@ -49,7 +49,7 @@ def test_init_pc(arch_dbg):
     assert arch_dbg.pc == CODE_ADDRESS
 
 def test_curr_insn(arch_dbg):
-    assert arch_dbg.curr_insn.mnemonic.lower() == 'nop'
+    assert arch_dbg.get_current_insn().mnemonic.lower() == 'nop'
 
 def test_step(arch_dbg, nop):
     for i in range(3):

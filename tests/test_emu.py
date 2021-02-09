@@ -60,7 +60,7 @@ def test_from_file(arch, isa, nop):
 
     assert isa.address_to_pointer(emu.pc) == entry
     assert emu.isa == isa
-    assert emu.curr_insn.mnemonic == 'nop'
+    assert emu.get_current_insn().mnemonic == 'nop'
     assert emu.mem.read(address, len(data)) == data
 
 def check_map_warning(records, address, perms):

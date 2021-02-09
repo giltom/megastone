@@ -109,7 +109,7 @@ def test_emu(seg_elf):
     emu = Emulator.from_execfile(seg_elf)
     assert emu.arch == ARCH_MIPS
     assert emu.pc == seg_elf.symbols['__start']
-    assert emu.curr_insn.mnemonic == 'add'
+    assert emu.get_current_insn().mnemonic == 'add'
 
 def test_emu_sec(sec_elf):
     with pytest.warns(MegastoneWarning) as records:
@@ -120,4 +120,4 @@ def test_emu_sec(sec_elf):
     
     assert emu.arch == ARCH_MIPS
     assert emu.pc == sec_elf.symbols['__start']
-    assert emu.curr_insn.mnemonic == 'add'
+    assert emu.get_current_insn().mnemonic == 'add'

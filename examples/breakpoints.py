@@ -24,7 +24,7 @@ start:
 emu.add_breakpoint(segment.address + 0x8)
 emu.add_code_hook(HOOK_STOP_ONCE, segment.address+0x10)
 emu.add_breakpoint(segment.address + 0x18)
-emu.trace(lambda e: print(e.curr_insn, e.regs.x0))
+emu.trace(lambda e: print(e.get_current_insn(), e.regs.x0))
 
 emu.jump(segment.address)
 for _ in range(5):

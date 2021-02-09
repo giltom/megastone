@@ -48,7 +48,7 @@ f"""
 """)
 
 def data_hook(emu: Emulator):
-    print(emu.curr_insn, hex(emu.curr_hook.address), emu.curr_access)
+    print(emu.get_current_insn(), hex(emu.curr_hook.address), emu.curr_access)
 
 def add_hooks(emu, ptr, size):
     emu.add_read_hook(data_hook, ptr, size)
