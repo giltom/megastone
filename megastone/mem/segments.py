@@ -11,44 +11,28 @@ from megastone.errors import MegastoneError
 from .memory import Memory
 from .access import AccessType, Access
 from .errors import MemoryAccessError
+from .address_range import AddressRange
 
 
 MIN_ALLOC_ADDRESS = 0x1000
 ALLOC_ROUND_SIZE = 0x1000
 
 
-@dataclass(frozen=True, repr=False)
-class Segment:
+class Segment(AddressRange):
     """Represents an area of memory."""
 
     name: str
-    start: int
-    size: int
     perms: AccessType
     mem: Memory
 
-    @property
-    def end(self):
-        return self.start + self.size
-
-    @property
-    def address(self):
-        """Alias of `start`."""
-        return self.start
+    def __init__(self, name, start, size, perms, mem):
+        super().__init__(start, size)
+        self.name = name
+        self.perms = perms
+        self.mem = mem
     
     def __repr__(self):
         return f"<Segment '{self.name}' at 0x{self.start:X}-0x{self.end:X}, {self.perms}>"
-
-    def overlaps(self, other):
-        """Return True if this segment overlaps other."""
-        return self.start < other.end and other.start < self.end
-
-    def adjacent(self, other):
-        """Return True if this segment overlaps other or is immediately next to it (with no gap)."""
-        return self.start <= other.end and other.start <= self.end
-
-    def contains_address(self, address):
-        return self.start <= address < self.end
 
     def read(self):
         """Read and return the entire segment data."""
@@ -134,7 +118,7 @@ class SegmentMemory(Memory):
     def _get_segment_by_address(self, address):
         #Override if more efficient implementation is available
         for seg in self._get_all_segments():
-            if seg.contains_address(address):
+            if address in seg:
                 return seg
         raise KeyError(f'No segment contains address 0x{address:X}')
 

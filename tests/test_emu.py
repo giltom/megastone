@@ -28,7 +28,7 @@ def test_write_error(emu):
 def test_alloc_stack(emu: Emulator):
     emu.allocate_stack(0x1000)
 
-    assert emu.mem.segments.stack.contains_address(emu.sp)
+    assert emu.sp in emu.mem.segments.stack
 
     emu.stack[0] = 0xDEAD
     assert emu.stack[0] == 0xDEAD
