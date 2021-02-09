@@ -179,8 +179,8 @@ class DictSegmentMemory(SegmentMemory):
     def _get_segment_by_name(self, name):
         return self._segments[name]
 
-    def _add_segment(self, seg: Segment):
-        #Call in a subclass to initialize segments
+    def _check_segment(self, seg: Segment):
+        #Can be called to verify a segment before processing it
         if seg.name in self._segments:
             raise MegastoneError(f'Segment with name "{seg.name}" already exists')
 
@@ -188,6 +188,9 @@ class DictSegmentMemory(SegmentMemory):
             if old_seg.overlaps(seg):
                 raise MegastoneError('Segment overlap')
 
+    def _add_segment(self, seg: Segment):
+        #Call in a subclass to initialize segments
+        self._check_segment(seg)
         self._segments[seg.name] = seg
         return seg
 
@@ -195,14 +198,17 @@ class DictSegmentMemory(SegmentMemory):
 class MappableMemory(DictSegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
 
-    @abc.abstractmethod
-    def map(self, name, start, size, perms=AccessType.RWX) -> Segment:
+    def map(self, name, start, size, perms=AccessType.RWX):
         """
         Allocate a new Segment, initialized to 0, at the given address range.
         
         Returns the new Segment.
         """
-        #Implementation should call _add_segment() and also do any other needed maintenance....
+        seg = self._create_segment(name, start, size, perms)
+        self._check_segment(seg)
+        self._handle_new_segment(seg)
+        self._add_segment(seg)
+        return seg
 
     def load(self, name, address, data, perms=AccessType.RWX):
         """Shorthand for map() followed by write()."""
@@ -228,6 +234,13 @@ class MappableMemory(DictSegmentMemory):
         address = round_up(address, ALLOC_ROUND_SIZE)
         return self.map(name, address, size, perms)
 
+    def _handle_new_segment(self, seg: Segment):
+        """Handle a newly created segment after it has been verified but before it has been added."""
+        pass
+
+    def _create_segment(self, name, start, size, perms) -> Segment:
+        """Can override in subclass to customize segment creation."""
+        return Segment(name, start, size, perms, self)
 
 class SplittingSegmentMemory(SegmentMemory):
     """

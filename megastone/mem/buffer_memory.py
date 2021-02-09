@@ -20,11 +20,11 @@ class BufferMemory(MappableMemory, SplittingSegmentMemory):
     def __init__(self, arch):
         super().__init__(arch)
         self.locked = False
-    
-    def map(self, name, start, size, perms=AccessType.RWX):
+
+    def _create_segment(self, name, start, size, perms):
         if self.locked:
             raise MegastoneError('Segment mapping can\'t be changed for this memory; copy it first')
-        return self._add_segment(BufferSegment(name, start, size, perms, self))
+        return BufferSegment(name, start, size, perms, self)
 
     def _read_segment(self, segment: BufferSegment, offset, size):
         return segment._data[offset : offset + size]

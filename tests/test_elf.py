@@ -112,7 +112,6 @@ def test_emu(seg_elf):
     assert emu.curr_insn.mnemonic == 'add'
 
 def test_emu_sec(sec_elf):
-    return
     with pytest.warns(MegastoneWarning) as records:
         emu = Emulator.from_execfile(sec_elf)
     assert len(records) == 1

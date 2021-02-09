@@ -72,12 +72,8 @@ class UnicornMemory(MappableMemory):
         super().__init__(arch)
         self._uc = uc
 
-    def map(self, name, start, size, perms=AccessType.RWX):
-        #Unicorn only supports mappings aligned to 0x1000
-        seg = Segment(name, start, size, perms, self)
-        self._add_segment(seg)
-        self._init_mapping(start, size, perms)
-        return seg
+    def _handle_new_segment(self, seg: Segment):
+        self._init_mapping(seg.start, seg.size, seg.perms)
 
     def _read(self, address, size):
         try:
