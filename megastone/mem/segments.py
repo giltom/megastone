@@ -145,6 +145,7 @@ class SegmentMemory(Memory):
             return None
         return seg.end - address
 
+
 class SegmentMapping(NamespaceMapping[Segment]):
     """Helper class used to access segments."""
 

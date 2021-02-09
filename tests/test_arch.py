@@ -49,3 +49,6 @@ def test_reg_name(arch):
 def test_multi_isa():
     with pytest.raises(AttributeError):
         ARCH_ARM.isa
+
+def test_disasm_0(isa, nop):
+    assert len(list(isa.disassemble(nop, count=0))) == 0

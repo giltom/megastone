@@ -9,15 +9,15 @@ from .errors import MemoryAccessError
 from .memory_io import StreamMemoryIO, MemoryIO
 
 
-DISASSEMBLY_CHUNK_SIZE = 0x400
-
 
 class Memory(abc.ABC):
     """Abstract class representing a memory space."""
 
+    DISASSEMBLY_CHUNK_SIZE = 0x400
+
     def __init__(self, arch: Architecture):
         self.arch = arch
-        self.default_isa = arch.default_isa
+        self.default_isa: InstructionSet = arch.default_isa
         self.verbose = False
 
     @abc.abstractmethod
@@ -153,7 +153,10 @@ class Memory(abc.ABC):
             yield from self._disassemble_known_size(address, max_size, max_num, isa)
 
     def _disassemble_known_size(self, address, max_size, max_num, isa: InstructionSet):
-        insn_limit = max_num if max_num is not None else float('inf')
+        if max_num is None:
+            insn_limit = float('inf')
+        else:
+            insn_limit = max_num
 
         count = 0
         offset = 0
@@ -162,11 +165,14 @@ class Memory(abc.ABC):
             size_remaining = max_size - offset
             curr_address = address + offset
 
-            read_size = min(size_remaining, insns_remaining * isa.max_insn_size, DISASSEMBLY_CHUNK_SIZE)
+            read_size = min(size_remaining, insns_remaining * isa.max_insn_size, self.DISASSEMBLY_CHUNK_SIZE)
             chunk = self.read(curr_address, read_size)
 
             total_size = 0
-            curr_max = None if max_num is None else insns_remaining
+            if max_num is None:
+                curr_max = None
+            else:
+                curr_max = insns_remaining
             for insn in isa.disassemble(chunk, curr_address, count=curr_max):
                 yield insn
                 total_size += insn.size
@@ -183,7 +189,11 @@ class Memory(abc.ABC):
         while max_num is None or count < max_num:
             try:
                 insn = self._disassemble_one_unknown_size(address, isa)
-            except (DisassemblyError, MemoryAccessError):
+            except DisassemblyError:
+                break
+            except MemoryAccessError:
+                if count == 0:
+                    raise
                 break
 
             yield insn
