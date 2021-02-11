@@ -185,7 +185,7 @@ class Debugger(abc.ABC):
         """Disassemble count instructions at the PC and return them."""
         return self.mem.disassemble(self.pc, count, self.isa)
 
-    def get_current_insn(self):
+    def get_curr_insn(self):
         """Return the current instruction about to be executed."""
         return self.mem.disassemble_one(self.pc, self.isa)
 

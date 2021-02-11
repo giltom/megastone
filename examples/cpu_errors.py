@@ -9,7 +9,7 @@ RO_ADDR = 0x2000
 
 def trace_func(emu: ms.Emulator):
     try:
-        print(emu.get_current_insn())
+        print(emu.get_curr_insn())
     except DisassemblyError:
         print('Invalid assembly')
 

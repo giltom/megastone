@@ -19,11 +19,11 @@ emu.mem.write_code(func_seg.address, f"""
 """)
 
 def func_hook(emu: Emulator):
-    print(hex(emu.sp), emu.get_current_insn()) #since this opcode never runs, the trace func isn't called
+    print(hex(emu.sp), emu.get_curr_insn()) #since this opcode never runs, the trace func isn't called
     return emu.stack[1] + emu.stack[2]
 
 emu.replace_function(func_seg.address, func_hook)
-emu.trace(lambda e: print(hex(e.sp), e.get_current_insn()))
+emu.trace(lambda e: print(hex(e.sp), e.get_curr_insn()))
 emu.add_code_hook(HOOK_STOP, start_seg.address + 0x10)
 
 emu.run(address=start_seg.address)
