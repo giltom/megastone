@@ -69,43 +69,44 @@ class Instruction:
     def __repr__(self):
         return f'<{self.__class__.__name__} 0x{self.address:X}: {self.bytes.hex()}  {self.mnemonic} {self.op_string}>'
 
-    def format(self, *, address=True, data=True, data_size=None, mnem_len=None, upper=False):
+    def format(self, fmt: str = '0x{ADDR}  {BYTES}  {asm}', *, num_bytes: int = None):
         """
         Nicely format this instruction as a string.
 
-        address - If true, include the address.
-        data - If true, include the instruction bytes.
-        data_size - If not None, pad/trim data to this number of bytes.
-        mnem_len - If not None, pad mnemonic with spaces to this length.
-        upper - If true, use uppercase for the mnemonic and operands.
+        Accepts a format string that can include the following keys:
+        addr - hex instruction address
+        bytes - instruction bytes
+        sbytes - bytes with spaces between
+        asm - full assembly instruction
+        mnem - mnemonic
+        ops - operand string
+        Any key can be in uppercase for the uppercase version.
+
+        If num_bytes is given, the bytes will be trimmed/padded to that number.
         """
-        result = ''
+        code = self.bytes
+        if num_bytes is None:
+            suffix = ssuffix = ''
+        elif len(code) > num_bytes:
+            code = code[:num_bytes]
+            suffix = ssuffix = '+'
+        else:
+            diff = num_bytes - len(code)
+            suffix = ' '*(2*diff + 1)
+            ssuffix = ' '*(3*diff + 1)
 
-        if address:
-            result += f'0x{self.address:X}  '
+        keys = dict(
+            addr=f'{self.address:x}',
+            bytes=code.hex() + suffix,
+            sbytes=hex_spaces(code) + ssuffix,
+            asm=str(self),
+            mnem=self.mnemonic,
+            ops=self.op_string
+        )
+        keys.update({key.upper() : value.upper() for key, value in keys.items()})
 
-        if data:
-            code = self.bytes
-            if data_size is None:
-                suffix = '  '
-            elif len(code) > data_size:
-                code = code[:data_size]
-                suffix = '+ '
-            else:
-                length_diff = data_size - len(code)
-                suffix = ' ' * (3 * length_diff + 2)
-            result += f'{hex_spaces(code)}{suffix}'
+        return fmt.format(**keys)
 
-        mnem = self.mnemonic
-        if mnem_len is not None:
-            mnem = mnem.ljust(mnem_len)
-
-        assembly = f'{mnem} {self.op_string}'
-        if upper:
-            assembly = assembly.upper()
-        result += assembly
-
-        return result
 
     def __eq__(self, other):
         """Compare both the instruction bytes and the address."""

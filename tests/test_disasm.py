@@ -286,18 +286,18 @@ def test_format():
     address = 0x980
     assembly = 'add eax, ebx'
     code = ms.ISA_X86.assemble(assembly, address=address)
-    hex_code = hex_spaces(code)
+    hex_code = code.hex()
+    shex_code = hex_spaces(code)
     insn = ms.ISA_X86.parse_instruction(assembly, address=address)
 
-    assert insn.format() == f'0x{address:X}  {hex_code}  {assembly}'
-    
-    assert insn.format(address=False) == f'{hex_code}  {assembly}'
+    assert insn.format() == f'0x{address:X}  {hex_code.upper()}  {assembly}'
 
-    assert insn.format(data=False) == f'0x{address:X}  {assembly}'
-    assert insn.format(data_size=1) == f'0x{address:X}  {code[0]:02X}+ {assembly}'
-    assert insn.format(data_size=len(code)) == insn.format()
-    assert insn.format(data_size=len(code) + 1) == f'0x{address:X}  {hex_code}     {assembly}'
-    assert insn.format(data_size=len(code) + 2) == f'0x{address:X}  {hex_code}        {assembly}'
+    assert insn.format('{sbytes}') == hex_spaces(code).lower()
+    assert insn.format('{mnem}') == insn.mnemonic.lower()
+    assert insn.format('{OPS}') == insn.op_string.upper()
 
-    assert insn.format(mnem_len=4) == f'0x{address:X}  {hex_code}  {insn.mnemonic}  {insn.op_string}'
-    assert insn.format(upper=True) == f'0x{address:X}  {hex_code}  {assembly.upper()}'
+    assert insn.format(num_bytes=len(code)) == f'0x{address:X}  {hex_code.upper()}   {assembly}'
+    assert insn.format('{bytes}', num_bytes=1) == f'{code[0]:02x}+'
+    assert insn.format('{SBYTES}', num_bytes=1) == f'{code[0]:02X}+'
+    assert insn.format('{BYTES}', num_bytes=len(code) + 1) == hex_code.upper() + '   '
+    assert insn.format('{sbytes}', num_bytes=len(code) + 1) == shex_code + '    '

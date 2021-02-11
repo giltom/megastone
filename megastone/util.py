@@ -11,7 +11,7 @@ def parse_hex_int(s):
 
 
 def hex_spaces(data):
-    return ' '.join(f'{b:02X}' for b in data)
+    return ' '.join(f'{b:02x}' for b in data)
 
 
 def round_up(value, size):
