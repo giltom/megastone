@@ -59,7 +59,7 @@ def test_invalid(arch, mem, nop):
     assert len(list(mem.disassemble(SEG_ADDRESS, max_num=3))) == 2
 
 def test_disasm_seg(mem, num_nops):
-    assert len(list(mem.segments.seg.disassemble())) == num_nops
+    assert len(list(mem.disassemble(mem.segments.seg.address))) == num_nops
 
 def test_switch_isa(mem, isa):
     if isa is not ms.ISA_THUMB:

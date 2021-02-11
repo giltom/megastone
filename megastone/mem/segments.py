@@ -72,10 +72,6 @@ class Segment(AddressRange):
         """Search the segment for bytes, returning the found address or None if not found."""
         return self.mem.search(self.start, self.size, value, alignment=alignment)
 
-    def disassemble(self, isa=None):
-        """Disassemble starting at the segment start."""
-        return self.mem.disassemble(self.address, isa=isa)
-
 
 class SegmentMemory(Memory):
     """
