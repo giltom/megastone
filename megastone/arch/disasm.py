@@ -308,7 +308,7 @@ class MemoryOperand(Operand):
             parts.append(f'scale={self.scale}')
         if self.offset != 0 or len(parts) == 0:
             parts.append(f'offset={hex(self.offset)}')
-        return f'<{self.__class__.__name__}({", ".join(parts)})'
+        return f'<{self.__class__.__name__}({", ".join(parts)})>'
 
     def __str__(self):
         parts = []

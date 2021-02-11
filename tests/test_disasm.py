@@ -80,6 +80,7 @@ def test_armthumb_mem_index(arm_isa: ms.InstructionSet):
     assert op.scale == 1
     assert op.offset == 0
     assert str(op) == 'r2 + r3'
+    assert repr(op) == "<MemoryOperand(base_reg='r2', index_reg='r3')>"
 
 def test_armthumb_svc(arm_isa):
     assert arm_isa.parse_instruction('svc #40').is_interrupt
@@ -155,7 +156,7 @@ def test_x86_mem():
     assert op.offset == 0x80
 
     assert str(op) == 'rbx + 2*rcx + 0x80'
-    assert repr(op) == "<MemoryOperand(base_reg='rbx', index_reg='rcx', scale=2, offset=0x80)"
+    assert repr(op) == "<MemoryOperand(base_reg='rbx', index_reg='rcx', scale=2, offset=0x80)>"
 
 def test_x86_direct():
     insn = ms.ISA_X86.parse_instruction('mov eax, dword ptr [0x8000]')
@@ -170,7 +171,7 @@ def test_x86_direct():
     assert op.scale == 1
     
     assert str(op) == '0x8000'
-    assert repr(op) == "<MemoryOperand(offset=0x8000)"
+    assert repr(op) == "<MemoryOperand(offset=0x8000)>"
 
 def test_arm64_add():
     insn = ms.ISA_ARM64.parse_instruction('ADD X0, X1, X2')
@@ -295,6 +296,7 @@ def test_format():
     assert insn.format('{sbytes}') == hex_spaces(code).lower()
     assert insn.format('{mnem}') == insn.mnemonic.lower()
     assert insn.format('{OPS}') == insn.op_string.upper()
+    assert insn.format('{addr:0>16}') == f'{address:016x}'
 
     assert insn.format(num_bytes=len(code)) == f'0x{address:X}  {hex_code.upper()}   {assembly}'
     assert insn.format('{bytes}', num_bytes=1) == f'{code[0]:02x}+'
