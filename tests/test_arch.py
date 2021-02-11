@@ -52,3 +52,8 @@ def test_multi_isa():
 
 def test_disasm_0(isa, nop):
     assert len(list(isa.disassemble(nop, count=0))) == 0
+
+def test_bad_word(arch):
+    word = bytes(arch.word_size + 1)
+    with pytest.raises(ValueError):
+        arch.decode_word(word)

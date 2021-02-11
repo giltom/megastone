@@ -5,6 +5,9 @@ import enum
 import capstone
 
 
+from megastone.util import hex_spaces
+
+
 GROUP_BRANCH_RELATIVE = 7 #as far as i can tell this is consistent for all arches
 
 
@@ -65,6 +68,44 @@ class Instruction:
 
     def __repr__(self):
         return f'<{self.__class__.__name__} 0x{self.address:X}: {self.bytes.hex()}  {self.mnemonic} {self.op_string}>'
+
+    def format(self, *, address=True, data=True, data_size=None, mnem_len=None, upper=False):
+        """
+        Nicely format this instruction as a string.
+
+        address - If true, include the address.
+        data - If true, include the instruction bytes.
+        data_size - If not None, pad/trim data to this number of bytes.
+        mnem_len - If not None, pad mnemonic with spaces to this length.
+        upper - If true, use uppercase for the mnemonic and operands.
+        """
+        result = ''
+
+        if address:
+            result += f'0x{self.address:X}  '
+
+        if data:
+            code = self.bytes
+            if data_size is None:
+                suffix = '  '
+            elif len(code) > data_size:
+                code = code[:data_size]
+                suffix = '+ '
+            else:
+                length_diff = data_size - len(code)
+                suffix = ' ' * (3 * length_diff + 2)
+            result += f'{hex_spaces(code)}{suffix}'
+
+        mnem = self.mnemonic
+        if mnem_len is not None:
+            mnem = mnem.ljust(mnem_len)
+
+        assembly = f'{mnem} {self.op_string}'
+        if upper:
+            assembly = assembly.upper()
+        result += assembly
+
+        return result
 
     def __eq__(self, other):
         """Compare both the instruction bytes and the address."""

@@ -2,7 +2,7 @@ import pytest
 import dataclasses
 
 import megastone as ms
-
+from megastone.util import hex_spaces
 
 
 def test_armthumb_add(arm_isa: ms.InstructionSet):
@@ -24,6 +24,7 @@ def test_armthumb_add(arm_isa: ms.InstructionSet):
 
     assert insn.regs_read == ['r1', 'r2']
     assert insn.regs_written == ['r0']
+    assert insn.regs_accessed == ['r0', 'r1', 'r2']
     assert insn.regs_accessed == ['r0', 'r1', 'r2']
 
     assert insn.bytes == arm_isa.assemble('add r0, r1, r2')
@@ -272,6 +273,7 @@ def test_groups():
     insn = ms.ISA_THUMB.parse_instruction('SUB R1, R2, R3')
 
     assert insn.groups == ['thumb2']
+    assert insn.groups == ['thumb2']
 
 def test_unknown_op():
     insn = ms.ISA_ARM.parse_instruction('MRC p15, 0, r0, c1, c2, 3')
@@ -279,3 +281,23 @@ def test_unknown_op():
     assert insn.num_operands == 6
     assert insn.operands[0].type == ms.OperandType.OTHER
     assert 'OTHER' in repr(insn.operands[0])
+
+def test_format():
+    address = 0x980
+    assembly = 'add eax, ebx'
+    code = ms.ISA_X86.assemble(assembly, address=address)
+    hex_code = hex_spaces(code)
+    insn = ms.ISA_X86.parse_instruction(assembly, address=address)
+
+    assert insn.format() == f'0x{address:X}  {hex_code}  {assembly}'
+    
+    assert insn.format(address=False) == f'{hex_code}  {assembly}'
+
+    assert insn.format(data=False) == f'0x{address:X}  {assembly}'
+    assert insn.format(data_size=1) == f'0x{address:X}  {code[0]:02X}+ {assembly}'
+    assert insn.format(data_size=len(code)) == insn.format()
+    assert insn.format(data_size=len(code) + 1) == f'0x{address:X}  {hex_code}     {assembly}'
+    assert insn.format(data_size=len(code) + 2) == f'0x{address:X}  {hex_code}        {assembly}'
+
+    assert insn.format(mnem_len=4) == f'0x{address:X}  {hex_code}  {insn.mnemonic}  {insn.op_string}'
+    assert insn.format(upper=True) == f'0x{address:X}  {hex_code}  {assembly.upper()}'

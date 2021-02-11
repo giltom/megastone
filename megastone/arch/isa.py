@@ -113,7 +113,8 @@ class InstructionSet(DatabaseEntry):
 
     def parse_instruction(self, string, address=0):
         """Parse an instruction from a string and return an Instruction."""
-        return self.disassemble_one(self.assemble(string, address))
+        code = self.assemble(string, address)
+        return self.disassemble_one(code, address)
 
     def address_to_pointer(self, address):
         """Convert a code address to a pointer (relevant for thumb)."""
