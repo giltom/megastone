@@ -134,7 +134,7 @@ def test_set_bad_reg(dbg):
 def test_disassemble(arch_dbg):
     count = 5
 
-    insns = list(arch_dbg.disassemble(count))
+    insns = list(arch_dbg.disassemble_at_pc(count))
     assert insns[0].address == CODE_ADDRESS
 
     for insn in insns:
@@ -376,3 +376,70 @@ def test_watchpoint(dbg, mnem, atype):
 
 def test_perms(dbg):
     assert list(dbg.mem.segments.with_perms(AccessType.X)) == [dbg.mem.segments.code]
+
+
+class SavingHook(HookFunc):
+    def __init__(self):
+        self.addresses = []
+        self.interrupts = []
+
+    def __call__(self, dbg: Debugger):
+        self.addresses.append(dbg.pc)
+        self.interrupts.append(dbg.curr_int_num)
+        
+
+@pytest.mark.parametrize(['arch', 'mnem'], [(ARCH_ARM, 'SVC'), (ARCH_X86, 'int')])
+def test_int_hook(arch, mnem):
+    int_addrs = [CODE_ADDRESS + 0x4, CODE_ADDRESS + 0xC, CODE_ADDRESS + 0x18]
+    int_nums = [0x10, 0x80, 0x14]
+    stop_address = CODE_ADDRESS + 0x30
+    isa = arch.default_isa
+    int_size = isa.parse_instruction(f'{mnem} 0x0').size
+
+    dbg = get_emulator(arch, isa)
+    func = SavingHook()
+    dbg.add_interrupt_hook(func)
+
+    for int_num, addr in zip(int_nums, int_addrs):
+        dbg.mem.write_code(addr, f'{mnem} {int_num:#X}')
+
+    dbg.run_until(stop_address)
+
+    assert dbg.pc == stop_address
+    if arch is ARCH_X86:
+        assert func.interrupts == int_nums
+    else:
+        assert func.interrupts == [2, 2, 2]
+    assert func.addresses == [addr + int_size for addr in int_addrs]
+
+
+def test_block_hook(dbg):
+    code_size = dbg.mem.write_code(CODE_ADDRESS, """
+        NOP
+        NOP
+        B block2
+
+    block2:
+        NOP
+        NOP
+        BL block3
+        NOP
+
+    block3:
+        LDR R0, =block4
+        BLX r0
+        NOP
+
+    block4:
+        NOP
+        NOP
+    """)
+    block_insns = [0, 3, 7, 10]
+
+    func = SavingHook()
+    dbg.trace_blocks(func)
+
+    dbg.run_until(CODE_ADDRESS + code_size)
+
+    assert func.interrupts == [None]*4
+    assert func.addresses == [CODE_ADDRESS + i * 4 for i in block_insns]

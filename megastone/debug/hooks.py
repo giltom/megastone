@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+import enum
 
 from megastone.mem import AccessType
 
 if TYPE_CHECKING:
     from .debugger import Debugger
+
+
+class SpecialHookType(enum.Enum):
+    BLOCK = enum.auto()
+    INTERRUPT = enum.auto()
 
 
 class HookFunc(abc.ABC):
@@ -32,7 +38,7 @@ class Hook:
     """
     address: int
     size: int
-    type: AccessType
+    type: Union[AccessType, SpecialHookType]
     func: HookFunc
     _data: object = field(init=False, repr=False)
 

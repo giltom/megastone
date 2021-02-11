@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
 
 import unicorn
 
-from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause
-from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory, MemoryAccessError, AddressRange
+from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause, SpecialHookType
+from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory
 from megastone.arch import Architecture, Register
 from megastone.util import round_up, round_down
 from megastone.errors import UnsupportedError, warning
@@ -19,11 +18,13 @@ ACCESS_TYPE_TO_UC_PROT = {
     AccessType.X: unicorn.UC_PROT_EXEC
 }
 
-ACCESS_TYPE_TO_UC_HOOK = {
+HOOK_TYPE_TO_UC_HOOK = {
     AccessType.R: unicorn.UC_HOOK_MEM_READ,
     AccessType.W: unicorn.UC_HOOK_MEM_WRITE,
     AccessType.RW: unicorn.UC_HOOK_MEM_READ | unicorn.UC_HOOK_MEM_WRITE,
-    AccessType.X: unicorn.UC_HOOK_CODE
+    AccessType.X: unicorn.UC_HOOK_CODE,
+    SpecialHookType.BLOCK: unicorn.UC_HOOK_BLOCK,
+    SpecialHookType.INTERRUPT: unicorn.UC_HOOK_INTR
 }
 
 UC_ACCESS_TO_ACCESS_TYPE = {
@@ -207,12 +208,14 @@ class Emulator(Debugger):
         raise CPUError(str(e), self.pc) from None
 
     def _add_hook(self, hook: Hook):
-        uc_type = ACCESS_TYPE_TO_UC_HOOK.get(hook.type, None)
+        uc_type = HOOK_TYPE_TO_UC_HOOK.get(hook.type, None)
         if uc_type is None:
             raise UnsupportedError(f'Hook type {hook.type} is not supported by unicorn')
 
-        if hook.type is AccessType.X:
+        if hook.type is AccessType.X or hook.type is SpecialHookType.BLOCK:
             callback = self._code_hook
+        elif hook.type is SpecialHookType.INTERRUPT:
+            callback = self._interrupt_hook
         else:
             callback = self._data_hook
 
@@ -260,6 +263,10 @@ class Emulator(Debugger):
                 self._fault_access = Access(access_type, address, size, value)
 
             return False
+
+    def _interrupt_hook(self, uc, int_num, hook: Hook):
+        with self._catch_hook_exceptions():
+            self._handle_hook(hook, int_num=int_num)
 
     def _get_access_value(self, atype, size, value):
         if atype is AccessType.W:

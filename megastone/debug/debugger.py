@@ -5,7 +5,7 @@ import enum
 from megastone.mem import Memory, Access, AccessType
 from megastone.arch import Register, BaseRegisterState, InstructionSet
 from megastone.util import FlagConstant
-from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
+from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc, SpecialHookType
 
 
 
@@ -34,6 +34,7 @@ class Debugger(abc.ABC):
         self.stack = StackView(self)
         self.curr_hook: Hook = None
         self.curr_access: Access = None
+        self.curr_int_num: int = None
         self.start_pc = None
 
         self._stop_hook: Hook = None #Hook that stopped execution
@@ -107,7 +108,7 @@ class Debugger(abc.ABC):
         """Run a single instruction."""
         return self.run(1)
 
-    def add_hook(self, func: HookFunc, type: AccessType, address, size=1):
+    def add_hook(self, func: HookFunc, type, address, size=1):
         """
         Add a hook at the given addresses and return a the new Hook instance.
         
@@ -118,25 +119,33 @@ class Debugger(abc.ABC):
         self._add_hook(hook)
         return hook
 
-    def add_code_hook(self, func: HookFunc, address, size=1):
+    def add_code_hook(self, func, address, size=1):
         """Add a code (execute) hook at the given address and return a Hook object."""
         return self.add_hook(func, AccessType.X, address, size)
 
-    def add_read_hook(self, func: HookFunc, address, size=1):
+    def add_read_hook(self, func, address, size=1):
         """Add a read hook at the given address and return a Hook object."""
         return self.add_hook(func, AccessType.R, address, size)
 
-    def add_write_hook(self, func: HookFunc, address, size=1):
+    def add_write_hook(self, func, address, size=1):
         """Add a write hook at the given address and return a Hook object."""
         return self.add_hook(func, AccessType.W, address, size)
 
-    def add_rw_hook(self, func: HookFunc, address, size=1):
+    def add_rw_hook(self, func, address, size=1):
         """Add a read/write hook at the given address and return a Hook object."""
         return self.add_hook(func, AccessType.RW, address, size)
 
-    def trace(self, func: HookFunc):
+    def trace(self, func):
         """Hook all instructions."""
         return self.add_code_hook(func, ALL_ADDRESSES)
+
+    def trace_blocks(self, func):
+        """Hook all basic blocks."""
+        return self.add_hook(func, SpecialHookType.BLOCK, ALL_ADDRESSES)
+
+    def add_interrupt_hook(self, func):
+        """Add an interrupt hook."""
+        return self.add_hook(func, SpecialHookType.INTERRUPT, ALL_ADDRESSES)
 
     def add_breakpoint(self, address):
         """Add a HOOK_BREAK at the given address."""
@@ -160,15 +169,17 @@ class Debugger(abc.ABC):
         #This function may save arbitrary information in `hook._data` for later use.
         pass
 
-    def _handle_hook(self, hook: Hook, access: Access = None):
+    def _handle_hook(self, hook: Hook, access: Access = None, int_num: int = None):
         #Implementations should call this on every hook that is triggered
         self.curr_hook = hook
         self.curr_access = access
+        self.curr_int_num = int_num
         try:
             hook.func(self)
         finally:
             self.curr_hook = None
             self.curr_access = None
+            self.curr_int_num = None
 
     @abc.abstractmethod
     def remove_hook(self, hook: Hook):
@@ -181,9 +192,9 @@ class Debugger(abc.ABC):
         #but make sure to call super().stop()
         self._stop_hook = self.curr_hook
 
-    def disassemble(self, count):
-        """Disassemble count instructions at the PC and return them."""
-        return self.mem.disassemble(self.pc, count, self.isa)
+    def disassemble_at_pc(self, max_num=None):
+        """Disassemble up to max_num instructions at the PC and return them."""
+        return self.mem.disassemble(self.pc, max_num, self.isa)
 
     def get_curr_insn(self):
         """Return the current instruction about to be executed."""

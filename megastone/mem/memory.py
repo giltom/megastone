@@ -111,13 +111,14 @@ class Memory(abc.ABC):
         self.write(address, string.encode('UTF-8') + b'\0')
     
     def write_code(self, address, assembly, isa=None):
-        """Assemble the given instructions and write them to the address."""
+        """Assemble the given instructions and write them to the address. Return the code size."""
         isa = self._fix_isa(isa)
 
         code = isa.assemble(assembly, address)
         if self.verbose:
             print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
+        return len(code)
 
     def disassemble_one(self, address, isa=None):
         """Disassemble the instruction at the given address and return it."""

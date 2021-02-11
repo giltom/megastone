@@ -11,5 +11,3 @@ exclude_lines =
     raise UnsupportedError
     @abc.abstractmethod
     if __name__ ==
-
-skip_empty = True
