@@ -336,3 +336,28 @@ def test_replace_x86_func():
     dbg.replace_function(FUNC_ADDRESS, x86_replacement_func)
     dbg.run(address=CODE_ADDRESS)
     assert dbg.regs.ebx == 18
+
+
+@pytest.mark.parametrize(['mnem', 'atype'], [('LDR', 'R'), ('STR', 'W')])
+def test_watchpoint(dbg, mnem, atype):
+    dbg.mem.write_code(CODE_ADDRESS, f"""
+        LDR R0, =0x{DATA_ADDRESS:X}
+        NOP
+        NOP
+        {mnem} R1, [R0]
+        NOP
+        NOP
+        NOP
+    """)
+    watch_pc = CODE_ADDRESS + 3*4
+    end_pc = CODE_ADDRESS + 5*4
+
+    dbg.add_watchpoint(DATA_ADDRESS, type=AccessType[atype])
+    dbg.add_breakpoint(end_pc)
+
+    for _ in range(3):
+        dbg.run()
+        assert dbg.pc == watch_pc
+        dbg.run()
+        assert dbg.pc == end_pc
+        dbg.jump(CODE_ADDRESS)

@@ -185,7 +185,8 @@ class Emulator(Debugger):
     def _run(self, count=None):
         start = self.isa.address_to_pointer(self.pc)
         if count is None:
-            count = 0
+            #WORKAROUND FOR UNICORN BUG: PC doesn't update properly if count is not given. So we set it to the maximum value.
+            count = -1
 
         self._fault_cause = None
         self._fault_access = None

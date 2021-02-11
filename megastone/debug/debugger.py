@@ -5,7 +5,7 @@ import enum
 from megastone.mem import Memory, Access, AccessType
 from megastone.arch import Register, BaseRegisterState, InstructionSet
 from megastone.util import FlagConstant
-from .hooks import HOOK_STOP_ONCE, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
+from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc
 
 
 
@@ -144,8 +144,15 @@ class Debugger(abc.ABC):
 
     def run_until(self, stop_address, *, start_address=None, isa=None):
         """Run until reaching stop_address, optionally from start_address/isa."""
-        self.add_code_hook(HOOK_STOP_ONCE, stop_address)
-        self.run(address=start_address, isa=isa)
+        #We don't use HOOK_STOP_ONCE bc we want to remove the hook even if we don't hit it.
+        hook = self.add_code_hook(HOOK_STOP, stop_address)
+        try:
+            self.run(address=start_address, isa=isa)
+        finally:
+            self.remove_hook(hook)
+
+    def add_watchpoint(self, address, size=1, type=AccessType.W):
+        return self.add_hook(HOOK_BREAK, type, address, size)
         
     @abc.abstractmethod
     def _add_hook(self, hook: Hook):
