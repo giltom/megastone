@@ -1,0 +1,15 @@
+[run]
+branch = True
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if typing.TYPE_CHECKING
+    if TYPE_CHECKING:
+    assert False
+    raise NotImplementedError
+    raise UnsupportedError
+    @abc.abstractmethod
+    if __name__ ==
+
+skip_empty = True

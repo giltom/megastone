@@ -254,6 +254,16 @@ def test_mem_fault(dbg):
     assert info.value.access == Access(AccessType.W, address, 4, dbg.arch.encode_word(value))
     assert info.value.address == CODE_ADDRESS + 8
 
+    assert repr(info.value) == f'MemFaultError(0x{CODE_ADDRESS + 8:X}, FaultCause.UNMAPPED, {info.value.access!r})'
+
+def test_code_mem_fault(dbg):
+    address = 0x80
+    with pytest.raises(MemFaultError) as info:
+        dbg.run(address=address)
+    assert info.value.cause is FaultCause.UNMAPPED
+    assert info.value.access == Access(AccessType.X, address, 1)
+    assert info.value.address == address
+
 def test_stack_read(arch_dbg, arch):
     arch_dbg.mem.write_word(STACK_ADDRESS, 0xDEAD)
     arch_dbg.mem.write_word(STACK_ADDRESS + arch.word_size, 0xBEEF)
@@ -261,6 +271,8 @@ def test_stack_read(arch_dbg, arch):
     assert arch_dbg.stack[0] == 0xDEAD
     assert arch_dbg.stack[1] == 0xBEEF
     assert arch_dbg.stack[:2] == [0xDEAD, 0xBEEF]
+    with pytest.raises(ValueError):
+        arch_dbg.stack[2:]
 
 def test_stack_write(arch_dbg, arch):
     arch_dbg.stack[0] = 0xDEAD
@@ -284,7 +296,7 @@ def test_stack_pop(arch_dbg, arch):
     assert arch_dbg.sp == STACK_ADDRESS + arch.word_size
 
 def arm_replacement_func(dbg):
-    return dbg.regs.r0 + dbg.regs.r1
+    dbg.regs.r0 = 7
 
 def test_replace_func_arm(armthumb_dbg: Debugger, arm_isa, other_arm_isa):
     armthumb_dbg.mem.write_code(CODE_ADDRESS, f"""
@@ -361,3 +373,6 @@ def test_watchpoint(dbg, mnem, atype):
         dbg.run()
         assert dbg.pc == end_pc
         dbg.jump(CODE_ADDRESS)
+
+def test_perms(dbg):
+    assert list(dbg.mem.segments.with_perms(AccessType.X)) == [dbg.mem.segments.code]

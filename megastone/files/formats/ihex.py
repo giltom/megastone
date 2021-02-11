@@ -32,7 +32,7 @@ class IHEXFormat(ExecFormat):
         for i, segment in enumerate(binfile.segments):
             mem.load(f'seg{i}', segment.address, segment.data)
 
-        return IHEXFile(self, mem, binfile.minimum_address)
+        return IHEXFile(self, mem, entry)
 
 
 FORMAT_IHEX = IHEXFormat(

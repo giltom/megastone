@@ -22,7 +22,7 @@ def ihex_data():
 def test_auto_file():
     assert FORMAT_AUTO.parse_file(PATH, arch=ARCH_ARM64).format == FORMAT_IHEX
 
-def test_entry():
+def test_manual_entry():
     assert FORMAT_AUTO.parse_file(PATH, arch=ARCH_ARM64, entry=0x800).entry == 0x800
 
 def test_arch(exe):

@@ -1,7 +1,7 @@
 import platform
 import pytest
 
-from megastone import Architecture, ARCH_ARM, AssemblyError, DisassemblyError
+from megastone import Architecture, ARCH_ARM, AssemblyError, DisassemblyError, NotFoundError
 
 
 def test_native():
@@ -23,9 +23,6 @@ def test_neg_word(arch):
 def test_decode_word(arch):
     assert arch.decode_word(b'\xFF' * arch.word_size, signed=True) == -1
 
-def test_all_names():
-    assert 'x86' in Architecture.all_names()
-
 def test_repr():
     assert 'Architecture' in repr(ARCH_ARM)
 
@@ -46,6 +43,9 @@ def test_regs(arch):
 def test_reg_name(arch):
     assert arch.retval_reg.name in repr(arch.retval_reg)
 
+def test_reg_str(arch):
+    assert str(arch.pc_reg) == arch.pc_reg.name
+
 def test_multi_isa():
     with pytest.raises(AttributeError):
         ARCH_ARM.isa
@@ -57,3 +57,7 @@ def test_bad_word(arch):
     word = bytes(arch.word_size + 1)
     with pytest.raises(ValueError):
         arch.decode_word(word)
+
+def test_not_found():
+    with pytest.raises(NotFoundError):
+        Architecture.by_name('fake')

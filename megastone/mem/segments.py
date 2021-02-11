@@ -34,6 +34,16 @@ class Segment(AddressRange):
     def __repr__(self):
         return f"<Segment '{self.name}' at 0x{self.start:X}-0x{self.end:X}, {self.perms}>"
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, Segment) and
+            other.size == self.size and
+            other.start == self.start and
+            other.name == self.name and
+            other.perms == self.perms and 
+            other.mem == self.mem
+        )
+
     def read(self):
         """Read and return the entire segment data."""
         return self.mem.read(self.start, self.size)

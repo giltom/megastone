@@ -53,11 +53,7 @@ class AccessType(enum.Flag):
         return [cls.R, cls.W, cls.X]
 
     def __str__(self):
-        res = ''
-        for flag in self.flags():
-            if self & flag:
-                res += flag.name
-        return res
+        return self.name
 
     @property
     def verbose_name(self):

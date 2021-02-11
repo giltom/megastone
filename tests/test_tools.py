@@ -74,6 +74,6 @@ def test_megadisasm_bin(isa, nop, capfd, monkeypatch):
     set_argv(monkeypatch, '-b', isa.name)
     check_megadisasm(capfd)
 
-def test_megadisasm_bin(isa, nop, capfd, monkeypatch):
+def test_megadisasm_hex(isa, nop, capfd, monkeypatch):
     set_argv(monkeypatch, isa.name, hex_spaces(nop))
     check_megadisasm(capfd)

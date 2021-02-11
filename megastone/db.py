@@ -38,12 +38,6 @@ class DatabaseEntry:
     def all(cls: Type[T]) -> Generator[T]:
         """Return an iterable of all registered instances."""
         yield from cls._instances
-    
-    @classmethod
-    def all_names(cls) -> Generator[str]:
-        """Return an interable of all names of registered instances."""
-        for instance in cls.all():
-            yield instance.name
 
     def __init__(self, name: str, alt_names: Iterable[str] = ()):
         self.name = name

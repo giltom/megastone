@@ -70,6 +70,13 @@ def test_string(mem):
     mem.write_cstring(SEG_ADDRESS, string)
     assert mem.read_cstring(SEG_ADDRESS) == string
 
+def test_cstring_max(mem):
+    string = 'hello world'
+    max = 5
+
+    mem.write_cstring(SEG_ADDRESS, string)
+    assert mem.read_cstring(SEG_ADDRESS, max) == string[:max]
+
 def test_search(mem: SegmentMemory):
     search_addr = SEG_ADDRESS + 0x20
     magic = b'magic'
@@ -124,6 +131,7 @@ def test_unmapped(mem):
     assert info.value.access.address == address
     assert info.value.access.size == 0x3
     assert info.value.access.value is None
+    assert repr(info.value.access) == f'Access(type=AccessType.R, address=0x{address:X}, size=0x{size:X})'
 
 
 def test_add_existing(mem):
@@ -180,6 +188,10 @@ def test_truncate(mem, fileobj):
     fileobj.seek(0)
     fileobj.write(data)
     assert mem.read(SEG_ADDRESS, len(data)) == data
+
+def test_truncate_size(mem, fileobj):
+    fileobj.truncate(7)
+    assert fileobj.read() == mem.read(SEG_ADDRESS, 7)
 
 def test_seek_end(fileobj):
     fileobj.seek(1, io.SEEK_END)
@@ -246,3 +258,14 @@ def test_rw_adjacent(mem: MappableMemory):
 def test_context(mem):
     with mem as other_mem:
         assert mem is other_mem
+
+def test_access_str(mem):
+    assert str(AccessType.RW) == 'RW'
+
+def test_seg_contains(mem):
+    assert SEG_ADDRESS in mem.segments.seg
+    assert SEG_ADDRESS+SEG_SIZE not in mem.segments.seg
+    assert 'hello' not in mem.segments.seg
+
+def test_seg_addresses(mem):
+    assert list(mem.segments.seg.addresses(5)) == list(range(SEG_ADDRESS, SEG_ADDRESS + SEG_SIZE, 5))

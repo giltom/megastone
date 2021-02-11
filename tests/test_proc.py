@@ -60,3 +60,12 @@ def test_read_error(mem):
         mem.read(0x0, 20)
 
     assert info.value.access == ms.Access(ms.AccessType.R, 0, 20)
+
+def test_len_segments(mem):
+    assert len(mem.segments) == len(mem.segments)
+
+def test_bad_segment(mem):
+    assert 'bad' not in mem.segments
+
+def test_seg_eq(mem):
+    assert mem.segments['[stack]'] == mem.segments['[stack]']
