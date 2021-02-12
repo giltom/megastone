@@ -310,3 +310,11 @@ def test_map_anon(mem):
     seg = mem.map(0xabcd, 0x1000)
     assert seg.address == 0xabcd
     assert seg.name == f'anon_abcd'
+
+
+def test_bad_split_write(mem):
+    seg = mem.map(0x100000, 0x80)
+    with pytest.raises(MemoryAccessError) as info:
+        mem.write(seg.end-2, b'AAAA')
+    
+    assert info.value.access == Access.write(seg.end-2, b'AAAA')
