@@ -20,7 +20,7 @@ def test_read_error(emu):
 
     with pytest.raises(MemoryAccessError) as info:
         emu.mem.read(address, size)
-    assert info.value.access == Access(AccessType.R, address, size)
+    assert info.value.access == Access.read(address, size)
 
 def test_write_error(emu):
     address = 0x1001

@@ -50,3 +50,12 @@ class FlagConstant:
 
     def __repr__(self):
         return self.name
+
+
+def trim_range(start, size, base, max_size):
+    end = start + size
+    max_end = base + max_size
+
+    fixed_start = max(start, base)
+    fixed_end = min(end, max_end)
+    return fixed_start, fixed_end - fixed_start

@@ -2,7 +2,7 @@ import enum
 
 
 from megastone.errors import MegastoneError
-from megastone.mem import AccessType, Access
+from megastone.mem import Access
 
 
 class FaultCause(enum.Enum):
@@ -23,9 +23,7 @@ class InvalidInsnError(CPUError):
 
 class MemFaultError(CPUError):
     def __init__(self, address, cause: FaultCause, access: Access):
-        message = f'Memory fault at PC=0x{address:X}: {access.type.verbose_name} {cause.name}'
-        if access.type.is_data:
-            message += f', address=0x{access.address:X}, size=0x{access.size:X}'
+        message = f'Memory fault at PC=0x{address:X}: {access.verbose()}: {cause.name}'
         super().__init__(message, address)
         self.cause = cause
         self.access = access

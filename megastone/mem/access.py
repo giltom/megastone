@@ -55,6 +55,9 @@ class AccessType(enum.Flag):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return f'AccessType.{self.name}'
+
     @property
     def verbose_name(self):
         parts = []
@@ -80,9 +83,27 @@ class Access:
     size: int
     value: bytes = None #value for writes
 
+    @classmethod
+    def read(cls, address, size):
+        """Construct a read Access."""
+        return cls(AccessType.R, address, size)
+
+    @classmethod
+    def write(cls, address, value):
+        """Construct a write Access."""
+        return cls(AccessType.W, address, len(value), value)
+
+    @classmethod
+    def execute(cls, address):
+        """Construct an execute Access."""
+        return cls(AccessType.X, address, 1)
+
     def __repr__(self):
-        result = f'{self.__class__.__name__}(type=AccessType.{self.type.name}, address=0x{self.address:X}, size=0x{self.size:X}'
+        result = f'{self.__class__.__name__}(type={self.type!r}, address=0x{self.address:X}, size=0x{self.size:X}'
         if self.value is not None:
-            result += f", value=bytes.fromhex('{self.value.hex()}')"
+            result += f", value=bytes.fromhex({self.value.hex()!r})"
         result += ')'
         return result
+
+    def verbose(self):
+        return f'{self.type.verbose_name} 0x{self.address:X} +0x{self.size:X}'

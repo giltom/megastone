@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import abc
 from collections.abc import Iterable
 from pathlib import Path
@@ -9,8 +8,7 @@ from megastone.arch import Architecture
 from megastone.util import round_up, NamespaceMapping
 from megastone.errors import MegastoneError
 from .memory import Memory
-from .access import AccessType, Access
-from .errors import MemoryAccessError
+from .access import AccessType
 from .address_range import AddressRange
 
 
@@ -104,6 +102,14 @@ class SegmentMemory(Memory):
 
         code = isa.assemble(assembly)
         return self.search_all(code, alignment=isa.insn_alignment, perms=AccessType.X)
+
+    def is_mapped(self, address, size=1):
+        """True if the given range is mapped in a single segment."""
+        try:
+            seg = self.segments.by_address(address)
+        except KeyError:
+            return False
+        return address + size - 1 in seg
 
     @abc.abstractmethod
     def _get_all_segments(self) -> Iterable[Segment]:
