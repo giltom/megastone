@@ -2,7 +2,7 @@ import pytest
 import io
 
 
-from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError, MappableMemory
+from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError, MappableMemory, Access
 
 from .conftest import TEMP_FILE_DATA
 
@@ -131,7 +131,7 @@ def test_unmapped(mem):
     assert info.value.access.address == address
     assert info.value.access.size == 0x3
     assert info.value.access.value is None
-    assert repr(info.value.access) == f'Access(type=AccessType.R, address=0x{address:X}, size=0x{size:X})'
+    assert repr(info.value.access) == f'Access.read(0x{address:X}, 0x{size:X})'
 
 
 def test_add_existing(mem):
@@ -269,3 +269,13 @@ def test_seg_contains(mem):
 
 def test_seg_addresses(mem):
     assert list(mem.segments.seg.addresses(5)) == list(range(SEG_ADDRESS, SEG_ADDRESS + SEG_SIZE, 5))
+
+@pytest.mark.parametrize(['expr'], [
+    ['Access.read(0x3, 0x8)'],
+    ["Access.write(0x3, b'hello')"],
+    ['Access.execute(0x0)'],
+    ['Access(AccessType.RW, 0x3, 0x5)'],
+    ["Access(AccessType.WX, 0x3, 0x1, b'A')"]
+])
+def test_access_repr(expr):
+    assert repr(eval(expr, globals())) == expr

@@ -99,11 +99,19 @@ class Access:
         return cls(AccessType.X, address, 1)
 
     def __repr__(self):
-        result = f'{self.__class__.__name__}(type={self.type!r}, address=0x{self.address:X}, size=0x{self.size:X}'
+        classname = self.__class__.__name__
+
+        if self.type is AccessType.R:
+            return f'{classname}.read(0x{self.address:X}, 0x{self.size:X})'
+        if self.type is AccessType.W:
+            return f'{classname}.write(0x{self.address:X}, {self.value})'
+        if self.type is AccessType.X:
+            return f'{classname}.execute(0x{self.address:X})'
+
+        result = f'{classname}({self.type!r}, 0x{self.address:X}, 0x{self.size:X}'
         if self.value is not None:
-            result += f", value=bytes.fromhex({self.value.hex()!r})"
-        result += ')'
-        return result
+            result += f', {self.value}'
+        return result + ')'
 
     def verbose(self):
         return f'{self.type.verbose_name} 0x{self.address:X} +0x{self.size:X}'
