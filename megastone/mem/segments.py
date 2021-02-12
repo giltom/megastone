@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from megastone.arch import Architecture
-from megastone.util import round_up, NamespaceMapping
+from megastone.util import round_down, round_up, NamespaceMapping
 from megastone.errors import MegastoneError
 from .memory import Memory
 from .access import AccessType
@@ -242,8 +242,7 @@ class MappableMemory(DictSegmentMemory):
 
     def allocate(self, name, size, perms=AccessType.RWX):
         """Automatically allocate a new segment in an unused region."""
-        address = max([*(seg.end for seg in self.segments), MIN_ALLOC_ADDRESS])
-        address = round_up(address, ALLOC_ROUND_SIZE)
+        address = self._allocate_address(size)
         return self.map(name, address, size, perms)
 
     def _handle_new_segment(self, seg: Segment):
@@ -253,6 +252,35 @@ class MappableMemory(DictSegmentMemory):
     def _create_segment(self, name, start, size, perms) -> Segment:
         """Can override in subclass to customize segment creation."""
         return Segment(name, start, size, perms, self)
+
+    def _allocate_address(self, size):
+        segs = sorted(self.segments, key=lambda seg: seg.start)
+
+        if len(segs) == 0:
+            return MIN_ALLOC_ADDRESS
+
+        address = self._allocate_in_range(MIN_ALLOC_ADDRESS, segs[0].start, size)
+        if address is not None:
+            return address
+
+        for i, seg in enumerate(segs[:-1]):
+            address = self._allocate_in_range(seg.end, segs[i+1].start, size)
+            if address is not None:
+                return address
+
+        address = self._allocate_in_range(segs[-1].end, self.arch.word_mask + 1, size)
+        if address is not None:
+            return address
+        
+        raise MegastoneError(f'No address of size 0x{size:X} is available')
+
+    def _allocate_in_range(self, start, end, size):
+        start = round_up(start, ALLOC_ROUND_SIZE)
+        end = round_down(end, ALLOC_ROUND_SIZE)
+        if end - start >= size:
+            return start
+        return None
+
 
 class SplittingSegmentMemory(SegmentMemory):
     """

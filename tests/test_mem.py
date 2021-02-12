@@ -279,3 +279,28 @@ def test_seg_addresses(mem):
 ])
 def test_access_repr(expr):
     assert repr(eval(expr, globals())) == expr
+
+
+def test_alloc_before_first():
+    mem = BufferMemory(ARCH_ARM)
+    mem.map('seg', 0x2000, 0x1000)
+    seg2 = mem.allocate('seg2', 0x1000)
+    assert seg2.address == 0x1000
+
+
+def test_alloc_between():
+    mem = BufferMemory(ARCH_ARM)
+    mem.map('seg1', 0x0, 0x100)
+    mem.map('seg2', 0x300, 0x100)
+    mem.map('seg3', 0x1400, 0x100)
+    mem.map('seg4', 0x4000, 0x100)
+    mem.map('seg5', 0x5000, 0x100)
+    seg = mem.allocate('seg6', 0x70)
+    assert seg.address == 0x2000
+
+
+def test_alloc_after_last():
+    mem = BufferMemory(ARCH_ARM)
+    mem.map('seg1', 0x1000, 0x100)
+    seg3 = mem.allocate('name', 0x100)
+    assert seg3.address == 0x2000
