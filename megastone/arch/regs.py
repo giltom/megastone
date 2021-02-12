@@ -128,6 +128,10 @@ class BaseRegisterState(NamespaceMapping[int]):
         for name, value in kwargs.items():
             self[name] = value
 
+    def get(self, *args):
+        """Get the values of multiple registers."""
+        return tuple(self[name] for name in args)
+
     def __getitem__(self, key) -> int:
         reg = self._name_to_reg(key)
         return self.read(reg)

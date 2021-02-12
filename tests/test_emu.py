@@ -132,3 +132,15 @@ def test_overlap_long(emu: Emulator):
 def test_overlap_same(emu: Emulator):
     emu.mem.map(0x200, 0x200, 'seg1', AccessType.X)
     emu.mem.map(0x400, 0x200, 'seg2', AccessType.X)
+
+
+def test_save_context(emu: Emulator):
+    emu.regs.set(r0=1, r2=56, pc=0x1050)
+    assert emu.regs.get('r0', 'r2', 'pc') == (1, 56, 0x1050)
+    ctx = emu.save_context()
+
+    emu.regs.set(r0=9, r2=80, pc=0x90)
+    assert emu.regs.get('r0', 'r2', 'pc') == (9, 80, 0x90)
+
+    emu.restore_context(ctx)
+    assert emu.regs.get('r0', 'r2', 'pc') == (1, 56, 0x1050)

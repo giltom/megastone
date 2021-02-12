@@ -51,6 +51,9 @@ UC_ACCESS_TO_FAULT_CAUSE = {
     unicorn.UC_MEM_FETCH_PROT: FaultCause.PROTECTED
 }
 
+STACK_NAME = 'stack'
+DEFAULT_STACK_SIZE = 0x100000
+RET_FLAG_NAME = 'ret_flag'
 
 def perms_to_uc_prot(perms: AccessType):
     result = 0
@@ -171,11 +174,28 @@ class Emulator(Debugger):
         emu.jump(exe.entry)
         return emu
 
-    def allocate_stack(self, size, *, name='stack', perms=AccessType.RWX):
+    def allocate_stack(self, size=DEFAULT_STACK_SIZE, perms=AccessType.RWX):
         """Allocate a stack segment and set the SP to point to its top."""
-        segment = self.mem.allocate(size, name=name, perms=perms)
-        self.sp = segment.end - self.arch.word_size
+        segment = self.mem.allocate(size, name=STACK_NAME, perms=perms)
+        self.reset_sp()
         return segment
+
+    def reset_sp(self):
+        """Reset the SP to the top of the stack."""
+        self.sp = self.mem.segments[STACK_NAME].end - self.arch.word_size
+
+    def save_context(self):
+        """Save and return the current CPU context."""
+        return self._uc.context_save()
+
+    def restore_context(self, ctx):
+        """Restore the CPU from the given context."""
+        self._uc.context_restore(ctx)
+
+    def _get_flag_retaddr(self) -> int:
+        if RET_FLAG_NAME not in self.mem.segments:
+            self.mem.allocate(self.arch.max_insn_size, name=RET_FLAG_NAME, perms=AccessType.X)
+        return self.mem.segments[RET_FLAG_NAME].address
 
     def _read_reg(self, reg: Register) -> int:
         return self._uc.reg_read(reg.uc_id)

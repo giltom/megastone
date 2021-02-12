@@ -162,6 +162,24 @@ class Debugger(abc.ABC):
 
     def add_watchpoint(self, address, size=1, type=AccessType.W):
         return self.add_hook(HOOK_BREAK, type, address, size)
+
+    def run_function(self, address, *, isa=None):
+        """
+        Run until the given function returns and return its return value.
+        
+        Note that the caller is responsible for initializing the stack before calling this, if needed.
+        """
+        retaddr = self._get_flag_retaddr()
+        if self.arch.retaddr_reg is not None:
+            self.regs.retaddr = retaddr
+        else:
+            self.stack.push(retaddr)
+        self.run_until(retaddr, start_address=address, isa=isa)
+        return self.regs.retval
+
+    def _get_flag_retaddr(self) -> int:
+        #Get an unused address that can be used as a return address.
+        raise NotImplementedError('run_function is not implemented in this implementation')
         
     @abc.abstractmethod
     def _add_hook(self, hook: Hook):

@@ -275,7 +275,7 @@ class MappableMemory(DictSegmentMemory):
             if address is not None:
                 return address
 
-        address = self._allocate_in_range(segs[-1].end, self.arch.word_mask + 1, size)
+        address = self._allocate_in_range(segs[-1].end, self.arch.max_mem_size, size)
         if address is not None:
             return address
         

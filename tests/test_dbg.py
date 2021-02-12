@@ -1,3 +1,4 @@
+from megastone.arch.arches.x86 import ARCH_X86_64
 import pytest
 
 from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
@@ -443,3 +444,51 @@ def test_block_hook(dbg):
 
     assert func.interrupts == [None]*4
     assert func.addresses == [CODE_ADDRESS + i * 4 for i in block_insns]
+
+def test_run_func_arm(armthumb_dbg, other_arm_isa):
+    emu = armthumb_dbg
+    isa = other_arm_isa
+
+    seg = emu.mem.allocate(0x20)
+    emu.mem.write_code(seg.address, """
+        PUSH {LR}
+        ADD R0, R1
+        ADD R0, R2
+        POP {PC}
+    """, isa)
+    emu.allocate_stack()
+    emu.regs.set(r0=3, r1=5, r2=1)
+
+    value = emu.run_function(seg.address, isa=isa)
+    assert value == 9
+    assert emu.sp == emu.mem.segments.stack.end - 4
+
+    emu.reset_sp()
+    value = emu.run_function(seg.address, isa=isa)
+    assert value == 15
+    assert emu.sp == emu.mem.segments.stack.end - 4
+
+def test_run_func_x86():
+    emu = Emulator(ARCH_X86)
+
+    seg = emu.mem.allocate(0x20)
+    emu.mem.write_code(seg.address, """
+        mov eax, [esp + 4]
+        mov ecx, [esp + 8]
+        add eax, ecx
+        ret
+    """)
+    emu.allocate_stack()
+    
+    emu.stack.push(1)
+    emu.stack.push(5)
+    value = emu.run_function(seg.address)
+    assert value == 6
+    assert emu.sp == emu.mem.segments.stack.end - 12
+
+    emu.reset_sp()
+    emu.stack.push(8)
+    emu.stack.push(-1)
+    value = emu.run_function(seg.address)
+    assert value == 7
+    assert emu.sp == emu.mem.segments.stack.end - 12
