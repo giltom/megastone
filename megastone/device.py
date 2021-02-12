@@ -36,7 +36,7 @@ class Device:
             raise RuntimeError('A Device instance can only be attached to one Emulator')
         
         if not emu.mem.is_mapped(self.address, self.size):
-            emu.mem.map(self.name, self.address, self.size, AccessType.RW)
+            emu.mem.map(self.address, self.size, self.name, AccessType.RW)
         self._hook = emu.add_rw_hook(self._hook_func, self.address, self.size)
         self.emu = emu
 

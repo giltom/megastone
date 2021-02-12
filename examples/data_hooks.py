@@ -2,8 +2,8 @@ from megastone import Emulator, ARCH_ARM
 
 
 emu = Emulator(ARCH_ARM)
-code_seg = emu.mem.allocate('code', 0x1000)
-data_seg = emu.mem.allocate('data', 0x1000)
+code_seg = emu.mem.allocate(0x1000)
+data_seg = emu.mem.allocate(0x1000)
 
 data1 = data_seg.address
 data2 = data_seg.address + 1

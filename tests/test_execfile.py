@@ -55,7 +55,7 @@ def test_auto_file_default(temp_file):
 
 def test_lock(execfile: ExecFile):
     with pytest.raises(MegastoneError):
-        execfile.mem.map('test', 0x6000, 0x1000)
+        execfile.mem.map(0x6000, 0x1000, 'test')
 
 def test_com():
     file = FORMAT_COM.parse_bytes(b'aaaa')

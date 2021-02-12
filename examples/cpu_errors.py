@@ -17,8 +17,8 @@ def trace_func(emu: ms.Emulator):
 def test_code(code):
     emu = ms.Emulator(ARCH)
     data = ARCH.default_isa.assemble(code, BASE)
-    emu.mem.load('seg', BASE, data)
-    emu.mem.map('rodata', RO_ADDR, ms.Emulator.PAGE_SIZE, ms.AccessType.R)
+    emu.mem.load(BASE, data, 'seg')
+    emu.mem.map(RO_ADDR, ms.Emulator.PAGE_SIZE, 'rodata', ms.AccessType.R)
     emu.add_code_hook(ms.HOOK_STOP, BASE + len(data))
     emu.trace(trace_func)
     

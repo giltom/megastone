@@ -2,7 +2,7 @@ from megastone import Emulator, ARCH_ARM64, HOOK_STOP_ONCE
 
 
 emu = Emulator(ARCH_ARM64)
-segment = emu.mem.allocate('code', 0x1000)
+segment = emu.mem.allocate(0x1000, 'code')
 
 emu.mem.write_code(segment.address,
 """

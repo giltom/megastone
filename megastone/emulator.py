@@ -173,7 +173,7 @@ class Emulator(Debugger):
 
     def allocate_stack(self, size, *, name='stack', perms=AccessType.RWX):
         """Allocate a stack segment and set the SP to point to its top."""
-        segment = self.mem.allocate(name, size, perms)
+        segment = self.mem.allocate(size, name=name, perms=perms)
         self.sp = segment.end - self.arch.word_size
         return segment
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
-from pathlib import Path
+import io
 
 from megastone.arch import Architecture
 from megastone.util import round_down, round_up, NamespaceMapping
@@ -210,40 +210,47 @@ class DictSegmentMemory(SegmentMemory):
 class MappableMemory(DictSegmentMemory):
     """Abstract SegmentMemory subclass that supports allocating new segments at arbitrary addresses."""
 
-    def map(self, name, start, size, perms=AccessType.RWX):
+    def map(self, address, size, name=None, perms=AccessType.RWX):
         """
         Allocate a new Segment, initialized to 0, at the given address range.
         
         Returns the new Segment.
         """
-        seg = self._create_segment(name, start, size, perms)
+        if name is None:
+            name = f'anon_{address:x}'
+        elif not isinstance(name, str):
+            raise ValueError('Segment name must be a string')
+        
+        seg = self._create_segment(name, address, size, perms)
         self._check_segment(seg)
         self._handle_new_segment(seg)
         self._add_segment(seg)
         return seg
 
-    def load(self, name, address, data, perms=AccessType.RWX):
+    def load(self, address, data, name=None, perms=AccessType.RWX):
         """Shorthand for map() followed by write()."""
-        seg = self.map(name, address, len(data), perms)
+        seg = self.map(address, len(data), name=name, perms=perms)
         seg.write(data)
         return seg
     
-    def load_file(self, name, address, path, perms=AccessType.RWX):
+    def load_file(self, address, path, name=None, perms=AccessType.RWX):
         """Load the file at the given path."""
-        #Currently we read the entire file at once bc we need to know the file size in advance
-        #If performance becomes a problem this can be improved by using seek() and write_fileobj()
-        data = Path(path).read_bytes() 
-        return self.load(name, address, data, perms)
+        with open(path, 'rb') as file:
+            file.seek(0, io.SEEK_END)
+            size = file.tell()
+            self.map(address, size, name=name, perms=perms)
+            file.seek(0)
+            self.write_fileobj(address, file)
 
     def load_memory(self, mem: SegmentMemory):
         """Copy all segments from the given SegmentMemory into this memory."""
         for seg in mem.segments:
-            self.load(seg.name, seg.start, seg.read(), seg.perms)
+            self.load(seg.start, seg.read(), name=seg.name, perms=seg.perms)
 
-    def allocate(self, name, size, perms=AccessType.RWX):
+    def allocate(self, size, name=None, perms=AccessType.RWX):
         """Automatically allocate a new segment in an unused region."""
         address = self._allocate_address(size)
-        return self.map(name, address, size, perms)
+        return self.map(address, size, name=name, perms=perms)
 
     def _handle_new_segment(self, seg: Segment):
         """Handle a newly created segment after it has been verified but before it has been added."""

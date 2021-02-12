@@ -29,8 +29,8 @@ class IHEXFormat(ExecFormat):
             entry = binfile.minimum_address or 0
 
         mem = BufferMemory(arch)
-        for i, segment in enumerate(binfile.segments):
-            mem.load(f'seg{i}', segment.address, segment.data)
+        for segment in binfile.segments:
+            mem.load(segment.address, segment.data)
 
         return IHEXFile(self, mem, entry)
 

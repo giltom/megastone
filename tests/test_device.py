@@ -68,7 +68,7 @@ def regdev():
 @pytest.fixture
 def emu(dev, regdev):
     emu = ms.Emulator(ms.ARCH_ARM)
-    emu.mem.map('code', CODE_ADDR, SEG_SIZE)
+    emu.mem.map(CODE_ADDR, SEG_SIZE, 'code')
     emu.jump(CODE_ADDR)
     dev.attach(emu)
     regdev.attach(emu)

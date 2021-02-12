@@ -19,7 +19,7 @@ def dummy(*args):
 def mem(request, monkeypatch, arch, isa, nop, num_nops):
     mem = ms.BufferMemory(arch)
     mem.default_isa = isa
-    seg = mem.map('seg', SEG_ADDRESS, SEG_SIZE)
+    seg = mem.map(SEG_ADDRESS, SEG_SIZE, 'seg')
     seg.write(nop * num_nops)
 
     monkeypatch.setattr(mem, 'DISASSEMBLY_CHUNK_SIZE', FAKE_CHUNK_SIZE)

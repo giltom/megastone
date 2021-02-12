@@ -20,14 +20,14 @@ ARM_NOP = ARCH_ARM.arm.assemble('nop')
 def get_emulator(arch, isa):
     emu = Emulator(arch)
     map_code_segment(emu, 'code', CODE_ADDRESS, isa)
-    emu.mem.map('data', DATA_ADDRESS, DATA_SIZE, AccessType.RW)
+    emu.mem.map(DATA_ADDRESS, DATA_SIZE, 'data', AccessType.RW)
     emu.mem.default_isa = isa
     emu.sp = STACK_ADDRESS
     emu.jump(CODE_ADDRESS, isa)
     return emu
 
 def map_code_segment(emu, name, address, isa):
-    emu.mem.map(name, address, CODE_SIZE)
+    emu.mem.map(address, CODE_SIZE, name)
     nop = isa.assemble('nop')
     emu.mem.write(address, nop * (CODE_SIZE // len(nop)))
 

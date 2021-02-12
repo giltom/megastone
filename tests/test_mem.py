@@ -17,13 +17,13 @@ INITIAL_DATA = b'A' * SEG_SIZE
 def arch_mem(arch, isa):
     mem = BufferMemory(arch)
     mem.default_isa = isa
-    mem.load(SEG_NAME, SEG_ADDRESS, INITIAL_DATA)
+    mem.load(SEG_ADDRESS, INITIAL_DATA, name=SEG_NAME)
     return mem
 
 @pytest.fixture
 def mem():
     mem = BufferMemory(ARCH_ARM)
-    mem.load(SEG_NAME, SEG_ADDRESS, INITIAL_DATA)
+    mem.load(SEG_ADDRESS, INITIAL_DATA, name=SEG_NAME)
     return mem
 
 @pytest.fixture
@@ -111,7 +111,7 @@ def test_slice(mem):
 def test_allocate(mem):
     data = b'test'
 
-    seg = mem.allocate('seg2', SEG_SIZE)
+    seg = mem.allocate(SEG_SIZE, 'seg2')
     seg.write(data)
     assert mem.read(seg.address, len(data)) == data
 
@@ -136,12 +136,12 @@ def test_unmapped(mem):
 
 def test_add_existing(mem):
     with pytest.raises(MegastoneError):
-        mem.map('seg', 0x1000, 0x1000)
+        mem.map(0x1000, 0x1000, 'seg')
 
 
 def test_add_overlap(mem):
     with pytest.raises(MegastoneError):
-        mem.map('seg2', SEG_ADDRESS-0x10, 0x20)
+        mem.map(SEG_ADDRESS-0x10, 0x20, 'seg2')
 
 
 def test_load_mem(mem):
@@ -149,14 +149,14 @@ def test_load_mem(mem):
     data = b'hello'
 
     other = BufferMemory(ARCH_X86)
-    other.map('seg2', addr2, 0x100)
+    other.map(addr2, 0x100, 'seg2')
     other.segments.seg2.write(data)
     mem.load_memory(other)
     assert mem.read(mem.segments.seg2.address, len(data)) == data
 
 
 def test_adjacent(mem):
-    mem.map('seg2', SEG_ADDRESS+SEG_SIZE, 0x20)
+    mem.map(SEG_ADDRESS+SEG_SIZE, 0x20, 'seg2')
     assert mem.segments.seg.adjacent(mem.segments.seg2)
     assert mem.segments.seg2.adjacent(mem.segments.seg)
 
@@ -226,7 +226,7 @@ def test_dump(mem: Memory, temp_file):
     assert temp_file.read() == INITIAL_DATA
 
 def test_load_file(mem: MappableMemory, temp_file):
-    mem.load_file('seg2', 0x2000, temp_file.name)
+    mem.load_file(0x2000, temp_file.name, 'seg2')
     assert mem.segments.seg2.read() == TEMP_FILE_DATA
 
 def test_stream(mem: Memory):
@@ -248,7 +248,7 @@ def test_rw_adjacent(mem: MappableMemory):
     data = data1 + data2
     address = SEG_ADDRESS + SEG_SIZE - len(data1)
 
-    mem.map('seg2', SEG_ADDRESS + SEG_SIZE, 0x1000)
+    mem.map(SEG_ADDRESS + SEG_SIZE, 0x1000, 'seg2')
 
     mem.write(address, data1 + data2)
     assert mem.read(address, len(data1)) == data1
@@ -283,24 +283,30 @@ def test_access_repr(expr):
 
 def test_alloc_before_first():
     mem = BufferMemory(ARCH_ARM)
-    mem.map('seg', 0x2000, 0x1000)
-    seg2 = mem.allocate('seg2', 0x1000)
+    mem.map(0x2000, 0x1000, 'seg')
+    seg2 = mem.allocate(0x1000, 'seg2')
     assert seg2.address == 0x1000
 
 
 def test_alloc_between():
     mem = BufferMemory(ARCH_ARM)
-    mem.map('seg1', 0x0, 0x100)
-    mem.map('seg2', 0x300, 0x100)
-    mem.map('seg3', 0x1400, 0x100)
-    mem.map('seg4', 0x4000, 0x100)
-    mem.map('seg5', 0x5000, 0x100)
-    seg = mem.allocate('seg6', 0x70)
+    mem.map(0x0, 0x100, 'seg1')
+    mem.map(0x300, 0x100, 'seg2')
+    mem.map(0x1400, 0x100, 'seg3')
+    mem.map(0x4000, 0x100, 'seg4')
+    mem.map(0x5000, 0x100, 'seg5')
+    seg = mem.allocate(0x70, 'seg6')
     assert seg.address == 0x2000
 
 
 def test_alloc_after_last():
     mem = BufferMemory(ARCH_ARM)
-    mem.map('seg1', 0x1000, 0x100)
-    seg3 = mem.allocate('name', 0x100)
+    mem.map(0x1000, 0x100, 'seg1')
+    seg3 = mem.allocate(0x100, 'name')
     assert seg3.address == 0x2000
+
+
+def test_map_anon(mem):
+    seg = mem.map(0xabcd, 0x1000)
+    assert seg.address == 0xabcd
+    assert seg.name == f'anon_abcd'

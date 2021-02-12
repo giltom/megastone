@@ -39,13 +39,13 @@ def test_alloc_stack(emu: Emulator):
     assert emu.stack[0] == 0xDEAD
 
 def test_unaligned(emu: Emulator):
-    segment = emu.mem.map('code', 0x1080, 0x80)
+    segment = emu.mem.map(0x1080, 0x80, 'code')
     assert segment.start == 0x1080
     assert segment.size == 0x80
 
 def test_from_mem():
     mem = BufferMemory(ARCH_ARM)
-    mem.map('seg', 0x1000, 0x1000)
+    mem.map(0x1000, 0x1000, 'seg')
     emu = Emulator.from_memory(mem)
     assert emu.mem.segments.seg.address == 0x1000
 
@@ -69,12 +69,12 @@ def check_map_warning(records, address, perms):
     assert f' {perms} ' in records[0].message.args[0]
 
 def test_overlap_start(emu: Emulator):
-    seg1 = emu.mem.map('seg1', 0x800, 0x1000, AccessType.R)
+    seg1 = emu.mem.map(0x800, 0x1000, 'seg1', AccessType.R)
     assert seg1.address == 0x800
     assert seg1.read() == bytes(0x1000)
 
     with pytest.warns(MegastoneWarning) as records:
-        seg2 = emu.mem.map('seg2', 0x1800, 0x1000, AccessType.W)
+        seg2 = emu.mem.map(0x1800, 0x1000, 'seg2', AccessType.W)
     check_map_warning(records, 0x1000, 'RW')
 
     assert seg2.address == 0x1800
@@ -84,12 +84,12 @@ def test_overlap_start(emu: Emulator):
     assert emu.mem._get_uc_prot(0x1000) == UC_RW
 
 def test_overlap_end(emu: Emulator):
-    seg1 = emu.mem.map('seg1', 0x2800, 0x2000, AccessType.RW)
+    seg1 = emu.mem.map(0x2800, 0x2000, 'seg1', AccessType.RW)
     assert seg1.address == 0x2800
     assert seg1.read() == bytes(0x2000)
 
     with pytest.warns(MegastoneWarning) as records:
-        seg2 = emu.mem.map('seg2', 0x1800, 0x1000, AccessType.W)
+        seg2 = emu.mem.map(0x1800, 0x1000, 'seg2', AccessType.W)
     check_map_warning(records, 0x2000, 'RW')
 
     assert seg2.address == 0x1800
@@ -99,12 +99,12 @@ def test_overlap_end(emu: Emulator):
     assert emu.mem._get_uc_prot(0x1000) == UC_W
 
 def test_overlap_full(emu: Emulator):
-    seg1 = emu.mem.map('seg1', 0x1200, 0x200, AccessType.R)
+    seg1 = emu.mem.map(0x1200, 0x200, 'seg1', AccessType.R)
     assert seg1.address == 0x1200
     assert seg1.read() == bytes(0x200)
 
     with pytest.warns(MegastoneWarning) as records:
-        seg2 = emu.mem.map('seg2', 0x1600, 0x200, AccessType.RW)
+        seg2 = emu.mem.map(0x1600, 0x200, 'seg2', AccessType.RW)
     check_map_warning(records, 0x1000, 'RW')
 
     assert seg2.address == 0x1600
@@ -113,11 +113,11 @@ def test_overlap_full(emu: Emulator):
     assert emu.mem._get_uc_prot(0x1000) == UC_RW
 
 def test_overlap_long(emu: Emulator):
-    seg1 = emu.mem.map('seg1', 0x800, 0x2000, AccessType.R) #0x800-0x2800
-    seg2 = emu.mem.map('seg2', 0x4800, 0x2000, AccessType.X) #0x4800-0x6800
+    seg1 = emu.mem.map(0x800, 0x2000, 'seg1', AccessType.R) #0x800-0x2800
+    seg2 = emu.mem.map(0x4800, 0x2000, 'seg2', AccessType.X) #0x4800-0x6800
 
     with pytest.warns(MegastoneWarning) as records:
-        seg3 = emu.mem.map('seg3', 0x2800, 0x2000, AccessType.W) #0x2800 - 0x4800
+        seg3 = emu.mem.map(0x2800, 0x2000, 'seg3', AccessType.W) #0x2800 - 0x4800
     assert len(records) == 2
     check_map_warning([records[0]], 0x2000, 'RW')
     check_map_warning([records[1]], 0x4000, 'WX')
@@ -130,5 +130,5 @@ def test_overlap_long(emu: Emulator):
         assert emu.mem._get_uc_prot(page) == prot
 
 def test_overlap_same(emu: Emulator):
-    emu.mem.map('seg1', 0x200, 0x200, AccessType.X)
-    emu.mem.map('seg2', 0x400, 0x200, AccessType.X)
+    emu.mem.map(0x200, 0x200, 'seg1', AccessType.X)
+    emu.mem.map(0x400, 0x200, 'seg2', AccessType.X)
