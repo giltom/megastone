@@ -51,21 +51,18 @@ class InstructionSet(DatabaseEntry):
         self.cs_mode = cs_mode
         self.arch: Architecture = None #Will be set by Architecture when added
 
-        self._ks = None
+        self.ks_supported = self.ks_arch is not None
         if self.ks_supported:
             self._ks = keystone.Ks(self.ks_arch, self.ks_mode)
+        else:
+            self._ks = None
         
+        self.cs_supported = self.cs_arch is not None
         if self.cs_supported:
             self._cs = capstone.Cs(self.cs_arch, self.cs_mode)
             self._cs.detail = True
-
-    @property
-    def ks_supported(self):
-        return self.ks_arch is not None
-
-    @property
-    def cs_supported(self):
-        return self.cs_arch is not None
+        else:
+            self._cs = None
 
     def assemble(self, assembly, address=0) -> bytes:
         """

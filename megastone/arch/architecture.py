@@ -65,6 +65,15 @@ class Architecture(DatabaseEntry):
         for isa in self.isas:
             isa.arch = self
 
+        self.default_isa = self.isas[0]
+        self.word_mask = bits_to_mask(self.bits)
+        self.max_mem_size = 1 << self.bits
+        self.insn_sizes = sorted(set(size for isa in self.isas for size in isa.insn_sizes))
+        self.max_insn_size = max(self.insn_sizes)
+        self.min_insn_size = min(self.insn_sizes)
+        self.uc_supported = self.uc_arch is not None
+        self.fully_supported = self.uc_supported and all(isa.ks_supported and isa.cs_supported for isa in self.isas)
+
     @staticmethod
     def native():
         """Return the native Architecture of this machine."""
@@ -76,23 +85,6 @@ class Architecture(DatabaseEntry):
         if len(self.isas) > 1:
             raise AttributeError('Arch has multiple ISAs')
         return self.isas[0]
-
-    @property
-    def default_isa(self):
-        """Return the default ISA."""
-        return self.isas[0]
-
-    @property
-    def word_mask(self):
-        return bits_to_mask(self.bits)
-
-    @property
-    def uc_supported(self):
-        return self.uc_arch is not None
-
-    @property
-    def fully_supported(self):
-        return self.uc_supported and all(isa.ks_supported and isa.cs_supported for isa in self.isas)
 
     def create_uc(self):
         """Create and return a Unicorn Uc object for this architecture"""

@@ -123,6 +123,11 @@ class BaseRegisterState(NamespaceMapping[int]):
         """Set the value of a register."""
         pass
 
+    def set(self, **kwargs):
+        """Set the values of multiple registers."""
+        for name, value in kwargs.items():
+            self[name] = value
+
     def __getitem__(self, key) -> int:
         reg = self._name_to_reg(key)
         return self.read(reg)
