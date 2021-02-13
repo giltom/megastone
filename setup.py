@@ -22,6 +22,9 @@ setuptools.setup(
             'megaformats=megastone.tools.megaformats:main'
         ]
     },
+    package_data = {
+        'megastone': ['rsp/xml/*']
+    },
     python_requires='>=3.8',
     install_requires=[
         'keystone-engine',

@@ -5,12 +5,13 @@ from pathlib import Path
 import shutil
 
 from megastone.arch import Architecture, InstructionSet, DisassemblyError
+from megastone.util import Closeable
 from .errors import MemoryAccessError
 from .memory_io import StreamMemoryIO, MemoryIO
 from .access import AccessType, Access
 
 
-class Memory(abc.ABC):
+class Memory(Closeable):
     """Abstract class representing a memory space."""
 
     DISASSEMBLY_CHUNK_SIZE = 0x400
@@ -283,12 +284,6 @@ class Memory(abc.ABC):
         if size != len(value):
             raise ValueError('Unexpected data length for slice write')
         self.write(key.start, value)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        self.close()
 
     def close(self):
         """Perform any neede cleanup."""

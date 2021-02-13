@@ -42,6 +42,10 @@ class Hook:
     func: HookFunc
     _data: object = field(init=False, repr=False)
 
+    @property
+    def is_data(self):
+        return isinstance(self.type, AccessType) and self.type.is_data
+
 
 class StopHookFunc(HookFunc):
     """Basic hook that simply stops execution."""

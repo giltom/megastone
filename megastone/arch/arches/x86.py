@@ -56,7 +56,7 @@ ARCH_X86.add_to_db()
 
 ARCH_X86_64 = X86Architecture(
     name='x86-64',
-    alt_names=['x86_64', 'x8664', 'x64', 'amd64'],
+    alt_names=['x86_64', 'x8664', 'x64', 'amd64', 'i386:x86-64'],
     bits=64,
     pc_name='rip',
     sp_name='rsp',

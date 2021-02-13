@@ -4,11 +4,14 @@ import importlib
 import abc
 from collections.abc import Generator
 import dataclasses
-
+from typing import TYPE_CHECKING
 
 import unicorn
 
 from megastone.util import NamespaceMapping
+
+if TYPE_CHECKING:
+    from megastone.arch import Architecture
 
 
 INVALID_REG_NAMES = ['invalid']
@@ -104,7 +107,7 @@ class BaseRegisterState(NamespaceMapping[int]):
     Registers can be read and modified via dict-like or namespace-like access.
     """
 
-    def __init__(self, arch):
+    def __init__(self, arch: Architecture):
         self._arch = arch
         self._generic_regs = dict(
             gen_pc=arch.pc_reg,

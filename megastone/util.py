@@ -1,6 +1,5 @@
 import abc
 from typing import TypeVar, Generic
-import functools
 
 
 T = TypeVar('T')
@@ -59,3 +58,15 @@ def trim_range(start, size, base, max_size):
     fixed_start = max(start, base)
     fixed_end = min(end, max_end)
     return fixed_start, fixed_end - fixed_start
+
+
+class Closeable(abc.ABC):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    @abc.abstractmethod
+    def close(self):
+        pass
