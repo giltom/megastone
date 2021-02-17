@@ -50,7 +50,7 @@ f"""
 def data_hook(emu: Emulator):
     print(emu.get_curr_insn(), hex(emu.curr_hook.address), emu.curr_access)
 
-def add_hooks(emu, ptr, size):
+def add_hooks(emu: Emulator, ptr, size):
     emu.add_read_hook(data_hook, ptr, size)
     emu.add_write_hook(data_hook, ptr, size)
 

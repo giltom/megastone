@@ -5,7 +5,7 @@ import logging
 import io
 
 from megastone.mem import AccessType, SegmentMemory, MemoryAccessError
-from megastone.debug import Debugger, StopReason, StopType
+from megastone.debug import Debugger, StopReason, StopType, HookType
 from .connection import RSPConnection, Signal, parse_hex_int, parse_list, encode_hex, parse_hex, ParsingError
 from .stream import EndOfStreamError, Stream
 from .regs import load_gdb_regs
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 STOP_POLL_TIME = 0.25
 
 HOOK_TYPE_TO_STOP_REASON = {
-    AccessType.X: 'hwbreak',
-    AccessType.W: 'watch',
-    AccessType.R: 'rwatch',
-    AccessType.RW: 'awatch'
+    HookType.CODE: 'hwbreak',
+    HookType.WRITE: 'watch',
+    HookType.READ: 'rwatch',
+    HookType.ACCESS: 'awatch'
 }
 
 ERROR_RESPONSE = b'E01'
@@ -228,7 +228,7 @@ class GDBServer:
         if key is None:
             return ''
         
-        if hook.is_data:
+        if hook.type.is_data:
             value = f'{hook.address:X}'
         else:
             value = ''

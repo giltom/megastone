@@ -23,7 +23,7 @@ def func_hook(emu: Emulator):
     return emu.stack[1] + emu.stack[2]
 
 emu.replace_function(func_seg.address, func_hook)
-emu.trace(lambda e: print(hex(e.sp), e.get_curr_insn()))
+emu.add_code_hook(lambda e: print(hex(e.sp), e.get_curr_insn()))
 emu.add_code_hook(HOOK_STOP, start_seg.address + 0x10)
 
 emu.run(address=start_seg.address)

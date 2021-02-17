@@ -12,5 +12,5 @@ emu.mem.write_code(segment.address,
     ADD R0, R0
 """)
 
-emu.trace(lambda e: print(e.get_curr_insn(), e.regs.r0))
+emu.add_code_hook(lambda e: print(e.get_curr_insn(), e.regs.r0))
 emu.run(count=4, address=segment.address)

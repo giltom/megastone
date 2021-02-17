@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 import unicorn
 
-from megastone.debug import CPUError, Debugger, Hook, ALL_ADDRESSES, InvalidInsnError, MemFaultError, FaultCause, SpecialHookType
+from megastone.debug import CPUError, Debugger, Hook, InvalidInsnError, MemFaultError, FaultCause, HookType
 from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory
 from megastone.arch import Architecture, Register
 from megastone.util import round_up, round_down
@@ -19,12 +19,12 @@ ACCESS_TYPE_TO_UC_PROT = {
 }
 
 HOOK_TYPE_TO_UC_HOOK = {
-    AccessType.R: unicorn.UC_HOOK_MEM_READ,
-    AccessType.W: unicorn.UC_HOOK_MEM_WRITE,
-    AccessType.RW: unicorn.UC_HOOK_MEM_READ | unicorn.UC_HOOK_MEM_WRITE,
-    AccessType.X: unicorn.UC_HOOK_CODE,
-    SpecialHookType.BLOCK: unicorn.UC_HOOK_BLOCK,
-    SpecialHookType.INTERRUPT: unicorn.UC_HOOK_INTR
+    HookType.READ: unicorn.UC_HOOK_MEM_READ,
+    HookType.WRITE: unicorn.UC_HOOK_MEM_WRITE,
+    HookType.ACCESS: unicorn.UC_HOOK_MEM_READ | unicorn.UC_HOOK_MEM_WRITE,
+    HookType.CODE: unicorn.UC_HOOK_CODE,
+    HookType.BLOCK: unicorn.UC_HOOK_BLOCK,
+    HookType.INTERRUPT: unicorn.UC_HOOK_INTR
 }
 
 UC_ACCESS_TO_ACCESS_TYPE = {
@@ -232,14 +232,14 @@ class Emulator(Debugger):
         if uc_type is None:
             raise UnsupportedError(f'Hook type {hook.type} is not supported by unicorn')
 
-        if hook.type is AccessType.X or hook.type is SpecialHookType.BLOCK:
+        if hook.type is HookType.CODE or hook.type is HookType.BLOCK:
             callback = self._code_hook
-        elif hook.type is SpecialHookType.INTERRUPT:
+        elif hook.type is HookType.INTERRUPT:
             callback = self._interrupt_hook
         else:
             callback = self._data_hook
 
-        if hook.address is ALL_ADDRESSES:
+        if hook.address is None:
             begin, end = 1, 0
         else:
             begin, end = hook.address, hook.address + hook.size - 1

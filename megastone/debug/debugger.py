@@ -2,14 +2,9 @@ import abc
 from dataclasses import dataclass
 import enum
 
-from megastone.mem import Memory, Access, AccessType
+from megastone.mem import Memory, Access
 from megastone.arch import Register, BaseRegisterState, InstructionSet
-from megastone.util import FlagConstant
-from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc, SpecialHookType
-
-
-
-ALL_ADDRESSES = FlagConstant('ALL_ADDRESSES')
+from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc, HookType
 
 
 
@@ -108,60 +103,45 @@ class Debugger(abc.ABC):
         """Run a single instruction."""
         return self.run(1)
 
-    def add_hook(self, func: HookFunc, type, address, size=1):
+    def add_hook(self, func: HookFunc, type: HookType, address=None, size=1):
         """
         Add a hook at the given addresses and return a the new Hook instance.
         
-        If `address` is `ALL_ADDRESSES`, `size` is ignored and the hook will affect all addresses.
+        If `address` is `None`, `size` is ignored and the hook will affect all addresses.
         Different Debugger implementations may support only some combinations of arguments.
         """
         hook = Hook(address=address, size=size, type=type, func=func)
         self._add_hook(hook)
         return hook
 
-    def add_code_hook(self, func, address, size=1):
+    def add_code_hook(self, func, address=None, size=1):
         """Add a code (execute) hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.X, address, size)
+        return self.add_hook(func, HookType.CODE, address, size)
 
-    def add_read_hook(self, func, address, size=1):
+    def add_read_hook(self, func, address=None, size=1):
         """Add a read hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.R, address, size)
+        return self.add_hook(func, HookType.READ, address, size)
 
-    def add_write_hook(self, func, address, size=1):
+    def add_write_hook(self, func, address=None, size=1):
         """Add a write hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.W, address, size)
+        return self.add_hook(func, HookType.WRITE, address, size)
 
-    def add_rw_hook(self, func, address, size=1):
+    def add_access_hook(self, func, address=None, size=1):
         """Add a read/write hook at the given address and return a Hook object."""
-        return self.add_hook(func, AccessType.RW, address, size)
+        return self.add_hook(func, HookType.ACCESS, address, size)
 
-    def trace(self, func):
-        """Hook all instructions."""
-        return self.add_code_hook(func, ALL_ADDRESSES)
-
-    def trace_blocks(self, func):
-        """Hook all basic blocks."""
-        return self.add_hook(func, SpecialHookType.BLOCK, ALL_ADDRESSES)
-
-    def add_interrupt_hook(self, func):
-        """Add an interrupt hook."""
-        return self.add_hook(func, SpecialHookType.INTERRUPT, ALL_ADDRESSES)
-
-    def add_breakpoint(self, address):
+    def add_breakpoint(self, address, size=1, type=HookType.CODE):
         """Add a HOOK_BREAK at the given address."""
-        return self.add_code_hook(HOOK_BREAK, address)
+        return self.add_hook(HOOK_BREAK, type, address, size)
 
     def run_until(self, stop_address, *, start_address=None, isa=None):
         """Run until reaching stop_address, optionally from start_address/isa."""
         #We don't use HOOK_STOP_ONCE bc we want to remove the hook even if we don't hit it.
-        hook = self.add_code_hook(HOOK_STOP, stop_address)
+        hook = self.add_hook(HOOK_STOP, HookType.CODE, stop_address)
         try:
             self.run(address=start_address, isa=isa)
         finally:
             self.remove_hook(hook)
-
-    def add_watchpoint(self, address, size=1, type=AccessType.W):
-        return self.add_hook(HOOK_BREAK, type, address, size)
 
     def run_function(self, address, *, isa=None):
         """

@@ -1,9 +1,10 @@
+from megastone.debug.hooks import Hook
 from megastone.arch.arches.x86 import ARCH_X86_64
 import pytest
 
 from megastone import (Debugger, Emulator, ARCH_ARM, HOOK_STOP, HOOK_STOP_ONCE,
     StopType, HookFunc, AccessType, InvalidInsnError, MemFaultError, Access, FaultCause,
-    ARCH_X86, CPUError)
+    ARCH_X86, CPUError, HookType)
 
 
 CODE_ADDRESS = 0x1000
@@ -155,7 +156,7 @@ def counter_hook():
 def test_trace(arch_dbg, counter_hook):
     count = 10
 
-    arch_dbg.trace(counter_hook)
+    arch_dbg.add_code_hook(counter_hook)
     arch_dbg.run(count)
     assert counter_hook.count == count + 1
 
@@ -216,7 +217,7 @@ def test_write_hook(rw_test_dbg: Debugger, access_hook):
     assert access_hook.access == Access.write(TEST_ADDRESS, b'\x03')
 
 def test_rw_hook(rw_test_dbg: Debugger, access_hook):
-    rw_test_dbg.add_rw_hook(access_hook, TEST_ADDRESS)
+    rw_test_dbg.add_access_hook(access_hook, TEST_ADDRESS)
     rw_test_dbg.run()
     assert access_hook.count == 2
 
@@ -351,8 +352,8 @@ def test_replace_x86_func():
     assert dbg.regs.ebx == 18
 
 
-@pytest.mark.parametrize(['mnem', 'atype'], [('LDR', 'R'), ('STR', 'W')])
-def test_watchpoint(dbg, mnem, atype):
+@pytest.mark.parametrize(['mnem', 'hook_type'], [('LDR', 'READ'), ('STR', 'WRITE')])
+def test_watchpoint(dbg, mnem, hook_type):
     dbg.mem.write_code(CODE_ADDRESS, f"""
         LDR R0, =0x{DATA_ADDRESS:X}
         NOP
@@ -365,7 +366,7 @@ def test_watchpoint(dbg, mnem, atype):
     watch_pc = CODE_ADDRESS + 3*4
     end_pc = CODE_ADDRESS + 5*4
 
-    dbg.add_watchpoint(DATA_ADDRESS, type=AccessType[atype])
+    dbg.add_breakpoint(DATA_ADDRESS, type=HookType[hook_type])
     dbg.add_breakpoint(end_pc)
 
     for _ in range(3):
@@ -399,7 +400,7 @@ def test_int_hook(arch, mnem):
 
     dbg = get_emulator(arch, isa)
     func = SavingHook()
-    dbg.add_interrupt_hook(func)
+    dbg.add_hook(func, HookType.INTERRUPT)
 
     for int_num, addr in zip(int_nums, int_addrs):
         dbg.mem.write_code(addr, f'{mnem} {int_num:#X}')
@@ -438,7 +439,7 @@ def test_block_hook(dbg):
     block_insns = [0, 3, 7, 10]
 
     func = SavingHook()
-    dbg.trace_blocks(func)
+    dbg.add_hook(func, HookType.BLOCK)
 
     dbg.run_until(CODE_ADDRESS + code_size)
 
@@ -492,3 +493,19 @@ def test_run_func_x86():
     value = emu.run_function(seg.address)
     assert value == 7
     assert emu.sp == emu.mem.segments.stack.end - 12
+
+
+def test_hook_type_data():
+    assert HookType.READ.is_data
+    assert not HookType.CODE.is_data
+    assert not HookType.INTERRUPT.is_data
+
+
+def test_htype_to_atype():
+    assert HookType.READ.access_type is AccessType.R
+    assert HookType.INTERRUPT.access_type is None
+
+def test_atype_to_htype():
+    assert HookType.from_access_type(AccessType.X) is HookType.CODE
+    with pytest.raises(ValueError):
+        HookType.from_access_type(AccessType.RX)

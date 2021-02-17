@@ -20,7 +20,7 @@ def test_code(code):
     emu.mem.load(BASE, data, 'seg')
     emu.mem.map(RO_ADDR, ms.Emulator.PAGE_SIZE, 'rodata', ms.AccessType.R)
     emu.add_code_hook(ms.HOOK_STOP, BASE + len(data))
-    emu.trace(trace_func)
+    emu.add_code_hook(trace_func)
     
     try:
         emu.run(address=BASE)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from megastone.debug import CPUError
+from megastone.debug import CPUError, HookType
 from megastone.mem import AccessType, Access
 from megastone.errors import MegastoneError
 from megastone.emulator import Emulator
@@ -37,7 +37,7 @@ class Device:
         
         if not emu.mem.is_mapped(self.address, self.size):
             emu.mem.map(self.address, self.size, self.name, AccessType.RW)
-        self._hook = emu.add_rw_hook(self._hook_func, self.address, self.size)
+        self._hook = emu.add_access_hook(self._hook_func, self.address, self.size)
         self.emu = emu
 
     def detach(self):
