@@ -59,6 +59,9 @@ def parse_hex(value):
     except ValueError as e:
         raise ParsingError(f'Invalid hex value: {value}') from e
 
+def parse_hexint_list(value, count, sep=b','):
+    return [parse_hex_int(elem) for elem in parse_list(value, count, sep)]
+
 def encode_hex(data):
     return data.hex().upper().encode()
 

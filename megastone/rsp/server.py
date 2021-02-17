@@ -1,12 +1,10 @@
-from xml.etree.ElementTree import parse
-from megastone.debug.errors import CPUError, InvalidInsnError, MemFaultError
 import threading
 import logging
 import io
 
-from megastone.mem import AccessType, SegmentMemory, MemoryAccessError
-from megastone.debug import Debugger, StopReason, StopType, HookType
-from .connection import RSPConnection, Signal, parse_hex_int, parse_list, encode_hex, parse_hex, ParsingError
+from megastone.mem import SegmentMemory, MemoryAccessError
+from megastone.debug import Debugger, StopReason, StopType, HookType, HOOK_STOP, CPUError, InvalidInsnError, MemFaultError
+from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
 from .stream import EndOfStreamError, Stream
 from .regs import load_gdb_regs
 
@@ -25,6 +23,14 @@ HOOK_TYPE_TO_STOP_REASON = {
 
 ERROR_RESPONSE = b'E01'
 OK_RESPONSE = b'OK'
+
+GDB_TYPE_TO_HOOK_TYPE = {
+    0: HookType.CODE,
+    1: HookType.CODE,
+    2: HookType.WRITE,
+    3: HookType.READ,
+    4: HookType.ACCESS
+}
 
 
 class GDBServer:
@@ -53,8 +59,12 @@ class GDBServer:
             b's': self._handle_step,
             b'c': self._handle_continue,
             b'S': self._handle_step_signal,
-            b'C': self._handle_continue_signal
+            b'C': self._handle_continue_signal,
+            b'Z': self._handle_add_breakpoint,
+            b'z': self._handle_remove_breakpoint
         }
+
+        self._hooks = {} #HookType => address => Hook
         
     def stop(self):
         """
@@ -118,7 +128,7 @@ class GDBServer:
         return OK_RESPONSE
 
     def _handle_read_mem(self, args):
-        address, size = self._parse_address_range(args)
+        address, size = parse_hexint_list(args, 2)
         try:
             data = self.dbg.mem.read(address, size)
         except MemoryAccessError as e:
@@ -128,8 +138,9 @@ class GDBServer:
 
     def _handle_write_mem(self, args):
         addresses, hex_data = parse_list(args, 2, b':')
-        address, _ = self._parse_address_range(addresses)
+        address, _ = parse_hexint_list(addresses, 2)
         data = parse_hex(hex_data)
+        logger.info(f'Write memory: 0x{address:X} +0x{len(data):X}')
         try:
             self.dbg.mem.write(address, data)
         except MemoryAccessError as e:
@@ -142,6 +153,20 @@ class GDBServer:
 
     def _handle_step(self, args):
         return self._handle_run(args, 1)
+
+    def _handle_add_breakpoint(self, args):
+        type, address, size = self._parse_hook(args)
+        logger.debug(f'adding hook: {type} 0x{address:X} +0x{size:X}')
+        hook = self.dbg.add_hook(HOOK_STOP, type, address, size)
+        self._add_hook(hook)
+        return OK_RESPONSE
+
+    def _handle_remove_breakpoint(self, args):
+        type, address, _ = self._parse_hook(args)
+        logger.debug(f'remove hook: {type} 0x{address:X}')
+        hook = self._pop_hook(type, address)
+        self.dbg.remove_hook(hook)
+        return OK_RESPONSE
 
     def _handle_continue_signal(self, args):
         return self._handle_run_signal(args, None)
@@ -173,7 +198,7 @@ class GDBServer:
         return self._get_stop_response()
 
     def _handle_supported(self, args):
-        return b'hwbreak+;qXfer:features:read+;qXfer:memory-map:read+'
+        return b'swbreak+;hwbreak+;qXfer:features:read+;qXfer:memory-map:read+'
 
     def _handle_read_features(self, args):
         file = io.BytesIO(b'<target version="1.0"><architecture>i386:x86-64</architecture></target>')
@@ -194,17 +219,34 @@ class GDBServer:
         fileobj.write(b'</memory-map>')
 
     def _handle_xfer(self, fileobj, args):
-        offset, length = self._parse_address_range(args)
+        offset, length = parse_hexint_list(args, 2)
         fileobj.seek(offset)
         data = fileobj.read(length)
         if len(data) < length:
             return b'l' + data
         return b'm' + data
-        
-    def _parse_address_range(self, args):
-        start, size = parse_list(args, 2)
-        return parse_hex_int(start), parse_hex_int(size)
 
+    def _add_hook(self, hook):
+        address_hooks = self._hooks.setdefault(hook.type, {})
+        address_hooks[hook.address] = hook
+
+    def _pop_hook(self, type, address):
+        if type not in self._hooks or address not in self._hooks[type]:
+            raise ParsingError(f'Hook of type {type} does not exist at 0x{address:X}')
+        return self._hooks[type].pop(address)
+
+    def _parse_hook(self, args):
+        type, address, size = parse_hexint_list(args, 3)
+
+        htype = GDB_TYPE_TO_HOOK_TYPE.get(type)
+        if htype is None:
+            raise ParsingError(f'Invalid hook type {type}')
+
+        if size == 0:
+            size = 1
+
+        return htype, address, size
+            
     def _get_stop_response(self):
         info = ''
         if self._stop_exception is None:
@@ -232,7 +274,7 @@ class GDBServer:
             value = f'{hook.address:X}'
         else:
             value = ''
-        return f'{key}:{value}'
+        return f'{key}:{value};'
 
     def _encode_reg(self, value, size):
         return self.dbg.arch.endian.encode_int(value, size)
