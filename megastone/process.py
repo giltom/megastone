@@ -1,3 +1,4 @@
+from megastone.mem.errors import MemoryReadError, MemoryWriteError
 from pathlib import Path
 
 from megastone.mem import Segment, SegmentMemory, AccessType
@@ -20,7 +21,7 @@ class ProcessMemory(SegmentMemory):
             if len(data) != size:
                 raise OSError(f'Expected {size} bytes, got {len(data)}')
         except OSError as e:
-            self._raise_read_error(address, size, str(e))
+            raise MemoryReadError(address, size, str(e)) from e
         return data
 
     def _write(self, address, data):
@@ -28,7 +29,7 @@ class ProcessMemory(SegmentMemory):
         try:
             self.mem_file.write(data)
         except OSError as e:
-            self._raise_write_error(address, data, str(e))
+            raise MemoryWriteError(address, data, str(e)) from e
 
     def _get_all_segments(self):
         self.maps_file.seek(0)

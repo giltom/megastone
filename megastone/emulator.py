@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from megastone.mem.errors import MemoryReadError, MemoryWriteError
 
 import unicorn
 
@@ -83,13 +84,13 @@ class UnicornMemory(MappableMemory):
         try:
             return bytes(self._uc.mem_read(address, size))
         except unicorn.UcError as e:
-            self._raise_read_error(address, size, str(e))
+            raise MemoryReadError(address, size, str(e)) from e
 
     def _write(self, address, data):
         try:
             self._uc.mem_write(address, data)
         except unicorn.UcError as e:
-            self._raise_write_error(address, data, str(e))
+            raise MemoryWriteError(address, data, str(e)) from e
 
     def _init_mapping(self, start, size, perms):
         if size == 0:

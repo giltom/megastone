@@ -305,9 +305,3 @@ class Memory(Closeable):
     def _get_max_read_size(self, address):
         #Return maximum amount of bytes that can be read from address, or None if not known
         return None
-    
-    def _raise_read_error(self, address, size, reason):
-        raise MemoryAccessError(Access(AccessType.R, address, size), reason) from None
-
-    def _raise_write_error(self, address, data, reason):
-        raise MemoryAccessError(Access(AccessType.W, address, len(data), data), reason) from None

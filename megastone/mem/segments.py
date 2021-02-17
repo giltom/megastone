@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 from collections.abc import Iterable
 import io
+from megastone.mem.errors import MemoryReadError, MemoryWriteError
 
 from megastone.arch import Architecture
 from megastone.util import round_down, round_up, NamespaceMapping
@@ -308,21 +309,18 @@ class SplittingSegmentMemory(SegmentMemory):
 
     def _read(self, address, size):
         try:
-            return b''.join(
-                self._read_segment(seg, start, size)
-                for seg, start, size in
-                self._get_data_offsets(address, size)
-            )
-        except KeyError:
-            self._raise_read_error(address, size, 'unmapped')
+            offsets = list(self._get_data_offsets(address, size))
+        except KeyError as e:
+            raise MemoryReadError(address, size, 'unmapped') from e
+        return b''.join(self._read_segment(seg, start, size) for seg, start, size in offsets)
 
     def _write(self, address, data):
         offset = 0
         #we call list() to detect any errors before starting to write
         try:
             offsets = list(self._get_data_offsets(address, len(data)))
-        except KeyError:
-            self._raise_write_error(address, data, 'unmapped')
+        except KeyError as e:
+            raise MemoryWriteError(address, data, 'unmapped') from e
         for seg, start, size in offsets: 
             self._write_segment(seg, start, data[offset : offset + size])
             offset += size

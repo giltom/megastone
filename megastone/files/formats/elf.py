@@ -1,4 +1,5 @@
 import abc
+from megastone.mem.errors import MemoryWriteError
 
 from elftools.elf import elffile
 from elftools.elf.constants import P_FLAGS, SH_FLAGS
@@ -107,7 +108,7 @@ class BaseELFMemory(DictSegmentMemory, SplittingSegmentMemory):
     def _write_segment(self, segment: BaseELFSegment, offset, data):
         end_offset = offset + len(data)
         if end_offset > segment.file_size:
-            self._raise_write_error(segment.address + offset, data, 'memory region is not in the physical ELF file')
+            raise MemoryWriteError(segment.address + offset, data, 'memory region is not in the physical ELF file')
         self._buffer[segment.file_offset + offset : segment.file_offset + end_offset] = data
 
 
