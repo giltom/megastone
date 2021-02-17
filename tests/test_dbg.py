@@ -509,3 +509,14 @@ def test_atype_to_htype():
     assert HookType.from_access_type(AccessType.X) is HookType.CODE
     with pytest.raises(ValueError):
         HookType.from_access_type(AccessType.RX)
+
+def test_hook_decorator(dbg):
+    data = []
+
+    @dbg.hook(HookType.CODE)
+    def inc_counter():
+        global counter
+        data.append(1)
+
+    dbg.run(5)
+    assert len(data) == 6

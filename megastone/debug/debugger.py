@@ -1,6 +1,7 @@
 import abc
 from dataclasses import dataclass
 import enum
+import functools
 
 from megastone.mem import Memory, Access
 from megastone.arch import Register, BaseRegisterState, InstructionSet
@@ -113,6 +114,13 @@ class Debugger(abc.ABC):
         hook = Hook(address=address, size=size, type=type, func=func)
         self._add_hook(hook)
         return hook
+
+    def hook(self, type: HookType, address=None, size=1):
+        """Decorator that can be used to add a function as a hook."""
+        def decorator(func):
+            self.add_hook(lambda x: func(), type, address, size)
+            return func
+        return decorator
 
     def add_code_hook(self, func, address=None, size=1):
         """Add a code (execute) hook at the given address and return a Hook object."""
