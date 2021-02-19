@@ -1,5 +1,6 @@
 import logging
 import enum
+from megastone.util import Closeable
 
 from .stream import Stream
 
@@ -104,9 +105,12 @@ def _encode_packet(data):
     return bytes([START_BYTE]) + escaped + bytes([END_BYTE]) + _encode_checksum(checksum)
 
 
-class RSPConnection:
+class RSPConnection(Closeable):
     def __init__(self, stream: Stream):
         self._stream = stream
+
+    def close(self):
+        self._stream.close()
 
     def send_packet(self, data):
         """Send the packet with the given data or raise IOError."""

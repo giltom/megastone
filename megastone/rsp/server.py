@@ -1,12 +1,13 @@
 import threading
 import logging
 import io
+import enum
 
 from megastone.errors import UnsupportedError
 from megastone.mem import SegmentMemory, MemoryAccessError
 from megastone.debug import Debugger, StopReason, StopType, HookType, CPUError, InvalidInsnError, MemFaultError
 from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
-from .stream import EndOfStreamError, Stream
+from .stream import EndOfStreamError, TCPStreamServer, Stream
 from .target import load_gdb_regs
 
 
@@ -34,19 +35,27 @@ GDB_TYPE_TO_HOOK_TYPE = {
 }
 
 
+class ServerStopReason(enum.Enum):
+    STOPPED = enum.auto()
+    KILLED = enum.auto()
+    DETACHED = enum.auto()
+
+
 class GDBServer:
     """GDB Server implementation. Exposes a Debugger to external GDB clients."""
 
-    def __init__(self, stream: Stream, dbg: Debugger):
+    def __init__(self, dbg: Debugger, port=1234, host='localhost'):
         if not dbg.arch.gdb_supported:
             raise UnsupportedError('Architecture doesn\'t support GDB')
 
         self.dbg = dbg
-        self.killed = False
 
-        self._conn = RSPConnection(stream)
         self._regs = load_gdb_regs(dbg.arch)
+
+        self._server = TCPStreamServer(host, port)
+        self._conn: RSPConnection = None
         self._stopped = threading.Event()
+        self._cmd_stop_reason: ServerStopReason = None
         
         self._stop_reason: StopReason = None
         self._stop_exception: CPUError = None
@@ -72,8 +81,18 @@ class GDBServer:
         }
 
         self._hooks = {} #HookType => address => Hook
-        self._thread = None
-        
+
+    def run(self, *, persistent=False):
+        """Run the server. Blocks until the client exists or an error occurs. Return a ServerStopReason."""
+        self._stopped.clear()
+        self._server.initialize()
+        with self._server:
+            self._server.set_timeout(STOP_POLL_TIME)
+            while True:
+                reason = self._run_once()
+                if reason is ServerStopReason.STOPPED or reason is ServerStopReason.KILLED or not persistent:
+                    return reason
+
     def stop(self):
         """
         Stop the server.
@@ -81,35 +100,47 @@ class GDBServer:
         This can be safely called from a different thread than the one running the server.
         """
         self._stopped.set()
-        if self._thread is not None and self._thread != threading.current_thread():
-            self._thread.join()
 
-    def start_thread(self):
-        """Start the server in a new thread. Returns the created Thread."""
-        self._thread = threading.Thread(self.run, daemon=True)
-        self._thread.start()
+    def _run_once(self):
+        conn = self._wait_for_connection()
+        if conn is None:
+            return ServerStopReason.STOPPED
 
-    def run(self):
-        """Run the server. Blocks until the client exists or an error occurs."""
-        self._stopped.clear()
-        self.killed = False
+        self._conn = conn
+        with self._conn:
+            return self._main_loop()
 
+    def _wait_for_connection(self):
+        logger.info('waiting for client connection')
+        while True:
+            try:
+                stream = self._server.get_stream()
+            except TimeoutError:
+                if self._check_stopped():
+                    return None
+            else:
+                return RSPConnection(stream)
+
+    def _main_loop(self):
         while True:
             try:
                 command = self._conn.receive_packet(timeout=STOP_POLL_TIME)
             except EndOfStreamError:
                 logger.warning('client disconnected')
-                break
+                return ServerStopReason.DETACHED
+            
+            if self._check_stopped():
+                return ServerStopReason.STOPPED
 
             if command is not None:
-                self._handle_command(command)
-
-            if self._stopped.is_set():
-                logger.info('stopping server')
-                break
+                reason = self._handle_command(command)
+                if reason is not None:
+                    return reason
 
     def _handle_command(self, command):
         logger.debug(f'received packet: {command}')
+        self._cmd_stop_reason = None
+
         for prefix, handler in self._handlers.items():
             if command.startswith(prefix):
                 args = command[len(prefix):]
@@ -118,21 +149,28 @@ class GDBServer:
                 break
         else: #no break
             response = b''
+
         if response is not None:
             self._conn.send_packet(response)
+        return self._cmd_stop_reason
+
+    def _check_stopped(self):
+        if self._stopped.is_set():
+            logger.info('server stopped by thread')
+            return True
+        return False
 
     def _handle_stop_reason(self, args):
         return self._get_stop_response()
 
     def _handle_detach(self, args):
         logger.info('client detached')
-        self.stop()
+        self._cmd_stop_reason = ServerStopReason.DETACHED
         return b'OK'
 
     def _handle_kill(self, args):
         logger.info('killed by client')
-        self.stop()
-        self.killed = True
+        self._cmd_stop_reason = ServerStopReason.KILLED
         return None
 
     def _handle_attached(self, args):

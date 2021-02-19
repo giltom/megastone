@@ -61,28 +61,28 @@ class Stream(Closeable):
             offset += num_written
 
 
+class StreamServer(Closeable):
+    """Server for generating Streams."""
+
+    def initialize(self):
+        """Initialize the server."""
+        pass
+
+    @abc.abstractmethod
+    def get_stream(self, timeout=None) -> Stream:
+        """Return the next Stream."""
+        pass
+
+    @abc.abstractmethod
+    def set_timeout(self, timeout=None):
+        pass
+
+
 class SocketStream(Stream):
     """Stream that uses a socket."""
 
     def __init__(self, sock: socket.socket):
         self.sock = sock
-
-    @classmethod
-    def connect(cls, host, port):
-        """Create a SocketStream by connecting to the given host/port."""
-        logger.info(f'connecting to {host}:{port}')
-        sock = socket.create_connection((host, port))
-        return cls(sock)
-
-    @classmethod
-    def accept(cls, port, interface='0.0.0.0'):
-        """Create a SocketStream by listening for one connection to the given port."""
-        logger.info(f'waiting for connection to {interface}:{port}')
-        reuse = platform.system() != 'Windows'
-        with socket.create_server((interface, port), reuse_port=reuse) as server:
-            sock, client = server.accept()
-            logger.info(f'client connected from {client}')
-            return cls(sock)
 
     def set_timeout(self, timeout):
         self.sock.settimeout(timeout)
@@ -104,75 +104,43 @@ class SocketStream(Stream):
         self.sock.close()
 
 
-def _get_pipe():
-    rfd, wfd = os.pipe()
-    rfile = os.fdopen(rfd, 'rb', buffering=0)
-    wfile = os.fdopen(wfd, 'wb', buffering=0)
-    return rfile, wfile
+def _get_server_sock(host, port):
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        if platform.system() != 'Windows':
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((host, port))
+        server.listen()
+    except:
+        server.close()
+        raise
+    return server
 
 
-class PipeStream(Stream):
-    """Stream that communicates via a pair of OS pipes."""
-
-    def __init__(self, read_file, write_file):
-        self._read_file = read_file
-        self._write_file = write_file
-        self._timeout = None
-
-        self._selector = selectors.DefaultSelector()
-        self._selector.register(self._read_file, selectors.EVENT_READ)
-
-    def set_timeout(self, timeout):
-        self._timeout = timeout
-
-    def read(self, size):
-        events = self._selector.select(timeout=self._timeout)
-        if len(events) == 0:
-            raise TimeoutError('Read timed out')
-
-        return self._read_file.read(size)
-
-    def write(self, data):
-        return self._write_file.write(data)
-
-    def close(self):
-        self._read_file.close()
-        self._write_file.close()
-        self._selector.close()
-
-
-class PipeStreamPair(Closeable):
-    """Pair of pipe streams."""
-
-    def __init__(self):
-        rfile1, wfile1 = _get_pipe()
-        rfile2, wfile2 = _get_pipe()
-        self.stream1 = PipeStream(rfile1, wfile2)
-        self.stream2 = PipeStream(rfile2, wfile1)
-
-    def close(self):
-        self.stream1.close()
-        self.stream2.close()
-
-
-class SerialStream(Stream):
-    """Stream over a serial port."""
-
-    def __init__(self, port: serial.Serial):
+class TCPStreamServer(StreamServer):
+    def __init__(self, host, port):
+        super().__init__()
+        self.host = host
         self.port = port
-        self.timeout = None
-
-    def set_timeout(self, timeout):
-        self.port.timeout = timeout
-
-    def read(self, size):
-        data = self.port.read(size)
-        if len(data) < size:
-            raise TimeoutError('Read timed out')
-        return data
+        self.server = None 
     
-    def write(self, data):
-        return self.port.write(data)
+    def initialize(self):
+        self.close()
+        logger.info(f'listening on {self.host}:{self.port}')
+        self.server = _get_server_sock(self.host, self.port)
 
     def close(self):
-        self.port.close()
+        if self.server is not None:
+            self.server.close()
+            self.server = None
+
+    def set_timeout(self, timeout=None):
+        self.server.settimeout(timeout)
+    
+    def get_stream(self):
+        try:
+            sock, client = self.server.accept()
+        except socket.timeout as e:
+            raise TimeoutError(str(e)) from e
+        logger.info(f'client connected from {client}')
+        return SocketStream(sock)
