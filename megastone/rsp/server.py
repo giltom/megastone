@@ -2,11 +2,12 @@ import threading
 import logging
 import io
 
+from megastone.errors import UnsupportedError
 from megastone.mem import SegmentMemory, MemoryAccessError
 from megastone.debug import Debugger, StopReason, StopType, HookType, CPUError, InvalidInsnError, MemFaultError
 from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
 from .stream import EndOfStreamError, Stream
-from .regs import load_gdb_regs
+from .target import load_gdb_regs
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,9 @@ class GDBServer:
     """GDB Server implementation. Exposes a Debugger to external GDB clients."""
 
     def __init__(self, stream: Stream, dbg: Debugger):
+        if not dbg.arch.gdb_supported:
+            raise UnsupportedError('Architecture doesn\'t support GDB')
+
         self.dbg = dbg
         self.killed = False
 
@@ -215,7 +219,8 @@ class GDBServer:
         return b'swbreak+;hwbreak+;qXfer:features:read+;qXfer:memory-map:read+;multiprocess-'
 
     def _handle_read_features(self, args):
-        file = io.BytesIO(b'<target version="1.0"><architecture>i386:x86-64</architecture></target>')
+        features = f'<target version="1.0"><architecture>{self.dbg.arch.gdb_name}</architecture></target>'
+        file = io.BytesIO(features.encode())
         return self._handle_xfer(file, args)
 
     def _handle_read_memory_map(self, args):
@@ -290,14 +295,18 @@ class GDBServer:
             value = ''
         return f'{key}:{value};'
 
-    def _encode_reg(self, value, size):
-        return self.dbg.arch.endian.encode_int(value, size)
+    def _encode_reg(self, gdb_reg):
+        if gdb_reg.is_dummy:
+            value = 0
+        else:
+            value = self.dbg.regs[gdb_reg.name]
+        return self.dbg.arch.endian.encode_int(value, gdb_reg.size)
 
     def _parse_reg(self, data):
         return self.dbg.arch.endian.decode_int(data)
 
     def _encode_regs(self):
-        reg_data = b''.join(self._encode_reg(self.dbg.regs[reg.name], reg.size) for reg in self._regs)
+        reg_data = b''.join(self._encode_reg(reg) for reg in self._regs)
         return encode_hex(reg_data)
 
     def _parse_regs(self, data):
@@ -306,6 +315,9 @@ class GDBServer:
             reg_data = stream.read(reg.size)
             if len(reg_data) < reg.size:
                 raise ParsingError('Received register packet is too short')
+            
+            if reg.is_dummy:
+                continue
 
             value = self._parse_reg(reg_data)
             if value != self.dbg.regs[reg.name]:

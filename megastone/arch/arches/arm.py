@@ -93,6 +93,7 @@ ARCH_ARM = ARMArchitecture(
     alt_names=['arm32', 'armle'],
     endian=Endian.LITTLE,
     arm_isa=ISA_ARM,
-    thumb_isa=ISA_THUMB
+    thumb_isa=ISA_THUMB,
+    gdb_name='arm'
 )
 ARCH_ARM.add_to_db()

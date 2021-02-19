@@ -23,13 +23,22 @@ class GDBRegister:
     number: int
     size: int
 
+    @property
+    def is_dummy(self):
+        return not self.name
+
+
+def open_target_file(arch: Architecture):
+    xml_path = PATH / 'xml' / f'{arch.name}.xml'
+    logger.debug(f'loading target file {xml_path}')
+    return xml_path.open('r')
+
 
 @functools.lru_cache()
 def load_gdb_regs(arch: Architecture):
     """Load the GDB registers for the given architecture and return a list of GDBRegister objects."""
-    xml_path = PATH / 'xml' / f'{arch.name}.xml'
-    logger.debug(f'loading register definitions from {xml_path}')
-    doc = ElementTree.parse(xml_path)
+    with open_target_file(arch) as file:
+        doc = ElementTree.parse(file)
 
     regs = []
     next_regnum = 0

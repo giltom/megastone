@@ -49,7 +49,8 @@ ARCH_X86 = X86Architecture(
     retval_name='eax',
     ks_mode=keystone.KS_MODE_32,
     cs_mode=capstone.CS_MODE_32,
-    uc_mode=unicorn.UC_MODE_32
+    uc_mode=unicorn.UC_MODE_32,
+    gdb_name='i386'
 )
 ISA_X86 = ARCH_X86.isa
 ARCH_X86.add_to_db()
@@ -63,7 +64,8 @@ ARCH_X86_64 = X86Architecture(
     retval_name='rax',
     ks_mode=keystone.KS_MODE_64,
     cs_mode=capstone.CS_MODE_64,
-    uc_mode=unicorn.UC_MODE_64
+    uc_mode=unicorn.UC_MODE_64,
+    gdb_name='i386:x86-64'
 )
 ISA_X86_64 = ARCH_X86_64.isa
 ARCH_X86_64.add_to_db()

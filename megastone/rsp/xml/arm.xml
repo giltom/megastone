@@ -24,6 +24,17 @@
   <reg name="lr" bitsize="32"/>
   <reg name="pc" bitsize="32" type="code_ptr"/>
 
+  <!-- Floating point currently not supported -->
+  <reg name="" bitsize="96" type="arm_fpa_ext" regnum="16"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="96" type="arm_fpa_ext"/>
+  <reg name="" bitsize="32"/>
+
   <!-- The CPSR is register 25, rather than register 16, because
        the FPA registers historically were placed between the PC
        and the CPSR in the "g" packet.  -->

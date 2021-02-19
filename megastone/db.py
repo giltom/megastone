@@ -41,7 +41,7 @@ class DatabaseEntry:
 
     def __init__(self, name: str, alt_names: Iterable[str] = ()):
         self.name = name
-        self.alt_names = list(alt_names)
+        self.alt_names = sorted(set(alt_names) - {name})
         
     def __repr__(self):
         return f"<{self.__class__.__name__} '{self.name}'>"
