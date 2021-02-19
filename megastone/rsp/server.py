@@ -53,7 +53,6 @@ class GDBServer:
         self._regs = load_gdb_regs(dbg.arch)
 
         self._server = TCPStreamServer(host, port)
-        self._conn: RSPConnection = None
         self._stopped = threading.Event()
         self._cmd_stop_reason: ServerStopReason = None
         
@@ -106,9 +105,8 @@ class GDBServer:
         if conn is None:
             return ServerStopReason.STOPPED
 
-        self._conn = conn
-        with self._conn:
-            return self._main_loop()
+        with conn:
+            return self._main_loop(conn)
 
     def _wait_for_connection(self):
         logger.info('waiting for client connection')
@@ -121,38 +119,35 @@ class GDBServer:
             else:
                 return RSPConnection(stream)
 
-    def _main_loop(self):
+    def _main_loop(self, conn: RSPConnection):
+        self._cmd_stop_reason = None
         while True:
             try:
-                command = self._conn.receive_packet(timeout=STOP_POLL_TIME)
+                command = conn.receive_packet(timeout=STOP_POLL_TIME)
             except EndOfStreamError:
                 logger.warning('client disconnected')
                 return ServerStopReason.DETACHED
-            
             if self._check_stopped():
                 return ServerStopReason.STOPPED
+            if command is None:
+                continue
 
-            if command is not None:
-                reason = self._handle_command(command)
-                if reason is not None:
-                    return reason
+            logger.debug(f'received packet: {command}')
+            response = self._handle_command(command)
+            
+            if response is not None:
+                logger.debug(f'sending response: {response}')
+                conn.send_packet(response)
+
+            if self._cmd_stop_reason is not None:
+                return self._cmd_stop_reason
 
     def _handle_command(self, command):
-        logger.debug(f'received packet: {command}')
-        self._cmd_stop_reason = None
-
         for prefix, handler in self._handlers.items():
             if command.startswith(prefix):
                 args = command[len(prefix):]
-                response = handler(args)
-                logger.debug(f'sending response: {response}')
-                break
-        else: #no break
-            response = b''
-
-        if response is not None:
-            self._conn.send_packet(response)
-        return self._cmd_stop_reason
+                return handler(args)
+        return b''
 
     def _check_stopped(self):
         if self._stopped.is_set():
