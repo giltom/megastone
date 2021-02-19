@@ -3,7 +3,7 @@ import logging
 import io
 
 from megastone.mem import SegmentMemory, MemoryAccessError
-from megastone.debug import Debugger, StopReason, StopType, HookType, HOOK_STOP, CPUError, InvalidInsnError, MemFaultError
+from megastone.debug import Debugger, StopReason, StopType, HookType, CPUError, InvalidInsnError, MemFaultError
 from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
 from .stream import EndOfStreamError, Stream
 from .regs import load_gdb_regs
@@ -38,6 +38,8 @@ class GDBServer:
 
     def __init__(self, stream: Stream, dbg: Debugger):
         self.dbg = dbg
+        self.killed = False
+
         self._conn = RSPConnection(stream)
         self._regs = load_gdb_regs(dbg.arch)
         self._stopped = threading.Event()
@@ -48,6 +50,7 @@ class GDBServer:
         self._handlers = {
             b'?': self._handle_stop_reason,
             b'D': self._handle_detach,
+            b'k': self._handle_kill,
             b'qAttached': self._handle_attached,
             b'qSupported': self._handle_supported,
             b'qXfer:features:read:target.xml:': self._handle_read_features,
@@ -65,6 +68,7 @@ class GDBServer:
         }
 
         self._hooks = {} #HookType => address => Hook
+        self._thread = None
         
     def stop(self):
         """
@@ -73,15 +77,18 @@ class GDBServer:
         This can be safely called from a different thread than the one running the server.
         """
         self._stopped.set()
+        if self._thread is not None and self._thread != threading.current_thread():
+            self._thread.join()
 
     def start_thread(self):
         """Start the server in a new thread. Returns the created Thread."""
-        thread = threading.Thread(self.run, daemon=True)
-        thread.start()
-        return thread
+        self._thread = threading.Thread(self.run, daemon=True)
+        self._thread.start()
 
     def run(self):
         """Run the server. Blocks until the client exists or an error occurs."""
+        self._stopped.clear()
+        self.killed = False
 
         while True:
             try:
@@ -107,7 +114,8 @@ class GDBServer:
                 break
         else: #no break
             response = b''
-        self._conn.send_packet(response)
+        if response is not None:
+            self._conn.send_packet(response)
 
     def _handle_stop_reason(self, args):
         return self._get_stop_response()
@@ -116,6 +124,12 @@ class GDBServer:
         logger.info('client detached')
         self.stop()
         return b'OK'
+
+    def _handle_kill(self, args):
+        logger.info('killed by client')
+        self.stop()
+        self.killed = True
+        return None
 
     def _handle_attached(self, args):
         return b'1'
@@ -157,7 +171,7 @@ class GDBServer:
     def _handle_add_breakpoint(self, args):
         type, address, size = self._parse_hook(args)
         logger.debug(f'adding hook: {type} 0x{address:X} +0x{size:X}')
-        hook = self.dbg.add_hook(HOOK_STOP, type, address, size)
+        hook = self.dbg.add_breakpoint(address, size, type)
         self._add_hook(hook)
         return OK_RESPONSE
 
@@ -198,7 +212,7 @@ class GDBServer:
         return self._get_stop_response()
 
     def _handle_supported(self, args):
-        return b'swbreak+;hwbreak+;qXfer:features:read+;qXfer:memory-map:read+'
+        return b'swbreak+;hwbreak+;qXfer:features:read+;qXfer:memory-map:read+;multiprocess-'
 
     def _handle_read_features(self, args):
         file = io.BytesIO(b'<target version="1.0"><architecture>i386:x86-64</architecture></target>')
