@@ -97,7 +97,9 @@ class GDBServer:
         self._monitor_commands = [
             _MonitorCommand('help', self._handle_help, 'Print a list of monitor commands.'),
             _MonitorCommand('megastone', self._handle_megastone, 'Check whether the server is a Megastone server.'),
-            _MonitorCommand('segments', self._handle_segments, 'Print the list of Segments.')
+            _MonitorCommand('segments', self._handle_segments, 'Print the list of Segments.'),
+            _MonitorCommand('info', self._handle_info, 'Print information about the Megastone configuration.'),
+            _MonitorCommand('error', self._handle_error, 'Print information about the last CPU error.')
         ]
 
     def run(self, *, persistent=False):
@@ -387,7 +389,7 @@ class GDBServer:
     def _handle_monitor_command_string(self, s):
         if s == '':
             s = 'help'
-            
+
         commands = [cmd for cmd in self._monitor_commands if cmd.name.startswith(s)]
         if len(commands) == 0:
             return f'Unknown monitor command {s}. Type "monitor help" for a list of commands.'
@@ -421,6 +423,21 @@ class GDBServer:
         for seg in segs:
             lines.append(f'{seg.address:#{addr_width}x}  {seg.size:#{size_width}x}  {seg.perms:<5}  {seg.name}')
         return '\n'.join(lines)
+
+    def _handle_info(self):
+        return (
+            f'Architecture: {self.dbg.arch.name}\n'
+            f'InstructionSet: {self.dbg.isa.name}\n'
+            f'Endian: {self.dbg.arch.endian.name.lower()}\n'
+            f'Debugger class: {self.dbg.__class__.__name__}\n'
+            f'Memory class: {self.dbg.mem.__class__.__name__}\n'
+            f'Server address: {self._server.host}:{self._server.port}'
+        )
+
+    def _handle_error(self):
+        if self._stop_exception is None:
+            return 'No CPU error occurred.'
+        return str(self._stop_exception)
 
 def _get_field_width(values, title):
     max_value = max(values)

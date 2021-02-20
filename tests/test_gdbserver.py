@@ -282,3 +282,13 @@ def test_segments(emu, server):
     output = server._handle_monitor_command_string('seg')
     for seg in emu.mem.segments:
         assert seg.name in output
+
+def test_info(server):
+    assert ARCH.name in server._handle_monitor_command_string('info')
+
+def test_error(emu, server):
+    assert server._handle_monitor_command_string('error') == 'No CPU error occurred.'
+
+    emu.mem.write_code(CODE_ADDRESS, 'LDR R0, [R0]')
+    assert server._handle_command(b's') == b'T0B'
+    assert 'Memory fault' in server._handle_monitor_command_string('error')
