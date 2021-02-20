@@ -1,12 +1,15 @@
+from megastone.util import round_up
 import threading
 import logging
 import io
 import enum
+import dataclasses
+import abc
 
 from megastone.errors import UnsupportedError
 from megastone.mem import SegmentMemory, MemoryAccessError
 from megastone.debug import Debugger, StopReason, StopType, HookType, CPUError, InvalidInsnError, MemFaultError
-from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
+from .connection import RSPConnection, Signal, parse_ascii, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
 from .stream import EndOfStreamError, TCPStreamServer
 from .target import load_gdb_regs
 
@@ -41,6 +44,13 @@ class ServerStopReason(enum.Enum):
     DETACHED = enum.auto()
 
 
+@dataclasses.dataclass
+class _MonitorCommand(abc.ABC):
+    name: str
+    handler: callable
+    help: str
+
+
 class GDBServer:
     """GDB Server implementation. Exposes a Debugger to external GDB clients."""
 
@@ -61,6 +71,8 @@ class GDBServer:
         self._cpu_stop_reason: StopReason = None
         self._stop_exception: CPUError = None
 
+        self._hooks = {} #HookType => address => Hook
+
         self._handlers = {
             b'?': self._handle_stop_reason,
             b'D': self._handle_detach,
@@ -78,10 +90,15 @@ class GDBServer:
             b'S': self._handle_step_signal,
             b'C': self._handle_continue_signal,
             b'Z': self._handle_add_breakpoint,
-            b'z': self._handle_remove_breakpoint
+            b'z': self._handle_remove_breakpoint,
+            b'qRcmd,' : self._handle_monitor_command
         }
 
-        self._hooks = {} #HookType => address => Hook
+        self._monitor_commands = [
+            _MonitorCommand('help', self._handle_help, 'Print a list of monitor commands.'),
+            _MonitorCommand('megastone', self._handle_megastone, 'Check whether the server is a Megastone server.'),
+            _MonitorCommand('segments', self._handle_segments, 'Print the list of Segments.')
+        ]
 
     def run(self, *, persistent=False):
         """Run the server. Blocks until the client exists or an error occurs."""
@@ -361,3 +378,51 @@ class GDBServer:
             if value != self.dbg.regs[reg.name]:
                 logger.debug(f'Setting register {reg.name} to 0x{value:X}')
                 self.dbg.regs[reg.name] = value
+
+    def _handle_monitor_command(self, args):
+        cmd = parse_ascii(parse_hex(args))
+        response = self._handle_monitor_command_string(cmd) + '\n'
+        return encode_hex(response.encode())
+
+    def _handle_monitor_command_string(self, s):
+        if s == '':
+            s = 'help'
+            
+        commands = [cmd for cmd in self._monitor_commands if cmd.name.startswith(s)]
+        if len(commands) == 0:
+            return f'Unknown monitor command {s}. Type "monitor help" for a list of commands.'
+        elif len(commands) > 1:
+            names = ', '.join(cmd.name for cmd in commands)
+            return f'Ambiguous monitor command {s}: could be {names}.'
+        else:
+            logger.debug(f'monitor command: {commands[0].name}')
+            return commands[0].handler()
+
+    def _handle_help(self):
+        lines = ['Megastone monitor commands:']
+        for command in self._monitor_commands:
+            lines.append(f'{command.name} - {command.help}')
+        return '\n'.join(lines)
+
+    def _handle_megastone(self):
+        return 'true'
+
+    def _handle_segments(self):
+        if not isinstance(self.dbg.mem, SegmentMemory):
+            return 'Current Memory doesn\'t support segments.'
+        
+        segs = sorted(self.dbg.mem.segments, key=lambda s: s.start)
+        if len(segs) == 0:
+            return 'No segments information is available.'
+
+        addr_width = _get_field_width((seg.address for seg in segs), 'Address')
+        size_width = _get_field_width((seg.size for seg in segs), 'Size')
+        lines = [f'{"Address":{addr_width}}  {"Size":{size_width}}  Perms  Name']
+        for seg in segs:
+            lines.append(f'{seg.address:#{addr_width}x}  {seg.size:#{size_width}x}  {seg.perms:<5}  {seg.name}')
+        return '\n'.join(lines)
+
+def _get_field_width(values, title):
+    max_value = max(values)
+    max_size = round_up(max_value.bit_length(), 4) // 4
+    return max(len(title), max_size + 2)

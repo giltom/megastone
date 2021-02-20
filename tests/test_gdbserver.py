@@ -269,3 +269,16 @@ def test_exception(emu, server):
     assert server._handle_command(b'c') == b'T06'
 
 
+def test_monitor(server):
+    assert server._handle_command(b'qRcmd,' + b'megastone'.hex().encode()).lower() == b'true\n'.hex().encode()
+
+def test_help(server):
+    assert 'Megastone monitor commands' in server._handle_monitor_command_string('')
+
+def test_bad_cmd(server):
+    assert 'Unknown' in server._handle_monitor_command_string('badbad')
+
+def test_segments(emu, server):
+    output = server._handle_monitor_command_string('seg')
+    for seg in emu.mem.segments:
+        assert seg.name in output
