@@ -49,5 +49,9 @@ def load_gdb_regs(arch: Architecture):
         regs.append(GDBRegister(name, regnum, bitsize//8))
         next_regnum = regnum + 1
 
+    regs.sort(key=lambda reg: reg.number)
+    numbers = [reg.number for reg in regs]
+    assert numbers == list(range(len(regs)))
+
     logger.debug(f'loaded {len(regs)} registers')
     return regs

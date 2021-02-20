@@ -7,7 +7,7 @@ from megastone.errors import UnsupportedError
 from megastone.mem import SegmentMemory, MemoryAccessError
 from megastone.debug import Debugger, StopReason, StopType, HookType, CPUError, InvalidInsnError, MemFaultError
 from .connection import RSPConnection, Signal, parse_hex_int, parse_hexint_list, parse_list, encode_hex, parse_hex, ParsingError
-from .stream import EndOfStreamError, TCPStreamServer, Stream
+from .stream import EndOfStreamError, TCPStreamServer
 from .target import load_gdb_regs
 
 
@@ -49,14 +49,16 @@ class GDBServer:
             raise UnsupportedError('Architecture doesn\'t support GDB')
 
         self.dbg = dbg
+        self.stop_reason: ServerStopReason = None
 
         self._regs = load_gdb_regs(dbg.arch)
 
         self._server = TCPStreamServer(host, port)
         self._stopped = threading.Event()
+        self._listening = threading.Event()
         self._cmd_stop_reason: ServerStopReason = None
         
-        self._stop_reason: StopReason = None
+        self._cpu_stop_reason: StopReason = None
         self._stop_exception: CPUError = None
 
         self._handlers = {
@@ -82,15 +84,18 @@ class GDBServer:
         self._hooks = {} #HookType => address => Hook
 
     def run(self, *, persistent=False):
-        """Run the server. Blocks until the client exists or an error occurs. Return a ServerStopReason."""
+        """Run the server. Blocks until the client exists or an error occurs."""
         self._stopped.clear()
         self._server.initialize()
+        self._listening.set()
         with self._server:
             self._server.set_timeout(STOP_POLL_TIME)
             while True:
                 reason = self._run_once()
                 if reason is ServerStopReason.STOPPED or reason is ServerStopReason.KILLED or not persistent:
-                    return reason
+                    self.stop_reason = reason
+                    break
+        self._listening.clear()
 
     def stop(self):
         """
@@ -235,16 +240,16 @@ class GDBServer:
         else:
             address = parse_hex_int(args)
 
-        self._stop_reason = None
+        self._cpu_stop_reason = None
         self._stop_exception = None
         logger.debug(f'run: address={address}, count={count}')
         try:
-            self._stop_reason = self.dbg.run(count=count, address=address)
+            self._cpu_stop_reason = self.dbg.run(count=count, address=address)
         except CPUError as e:
             self._stop_exception = e
             logger.info(f'stopped: {e}')
         else:
-            logger.debug(f'stopped: {self._stop_reason.type.name}')
+            logger.debug(f'stopped: {self._cpu_stop_reason.type.name}')
         
         return self._get_stop_response()
 
@@ -303,8 +308,8 @@ class GDBServer:
         info = ''
         if self._stop_exception is None:
             signum = Signal.SIGTRAP
-            if self._stop_reason is not None:
-                info = self._get_stop_info(self._stop_reason)
+            if self._cpu_stop_reason is not None:
+                info = self._get_stop_info(self._cpu_stop_reason)
         elif isinstance(self._stop_exception, MemFaultError):
             signum = Signal.SIGSEGV
         elif isinstance(self._stop_exception, InvalidInsnError):

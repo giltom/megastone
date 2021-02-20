@@ -86,6 +86,6 @@
     <!-- Negative Condition flag.  -->
     <field name="N" start="31" end="31"/>
   </flags>
-  <reg name="cpsr" bitsize="32" type="cpsr_flags"/>
+  <reg name="pstate" bitsize="32" type="cpsr_flags"/> <!--modified for compatibility with unicorn-->
 
 </feature>

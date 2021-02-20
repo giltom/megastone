@@ -28,13 +28,6 @@ class Signal(enum.IntEnum):
 class ParsingError(IOError):
     pass
 
-
-def parse_decimal_int(value):
-    try:
-        return int(value)
-    except ValueError as e:
-        raise ParsingError(f'Invalid decimal int: {value}') from e
-
 def parse_hex_int(value):
     try:
         return int(value, 16)
@@ -88,13 +81,11 @@ def _unescape_data(data):
     result = bytearray()
     escaped = False
     for byte in data:
-        if byte == ESCAPE_BYTE:
-            escaped = True
-        elif byte in ESCAPED_BYTES:
-            raise ParsingError(f'Invalid byte in data: 0x{byte:02X}')
-        elif escaped:
+        if escaped:
             result.append(byte ^ ESCAPE_XOR_VALUE)
             escaped = False
+        elif byte == ESCAPE_BYTE:
+            escaped = True
         else:
             result.append(byte)
     return bytes(result)
