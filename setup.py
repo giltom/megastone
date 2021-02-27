@@ -13,7 +13,7 @@ setuptools.setup(
     description='Higher-level assembly/disassembly/emulation library built on top of keystone + capstone + unicorn.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(include=['megastone*']),
     entry_points = {
         'console_scripts' : [
             'megaasm=megastone.tools.megaasm:main',
