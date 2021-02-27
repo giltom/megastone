@@ -25,11 +25,11 @@ class BaseMemoryIO(io.RawIOBase):
             return offset
         if whence == io.SEEK_CUR:
             return self._offset + offset
-        raise ValueError('Invalid seek type')
+        raise io.UnsupportedOperation('Invalid whence value')
 
     def _set_offset(self, offset):
         if offset < 0:
-            raise ValueError('Invalid seek offset')
+            raise io.UnsupportedOperation('Invalid seek location')
         self._offset = offset
 
     def _read(self, size):
