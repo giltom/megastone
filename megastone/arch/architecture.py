@@ -48,9 +48,6 @@ class Architecture(DatabaseEntry):
         self.uc_mode = uc_mode | endian.uc_endian
         self.gdb_name = gdb_name
 
-        for isa in self.isas:
-            isa.arch = self
-
         self.default_isa = self.isas[0]
         self.word_mask = bits_to_mask(self.bits)
         self.max_mem_size = 1 << self.bits

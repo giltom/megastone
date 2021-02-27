@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from collections.abc import Iterable
 
 import keystone
@@ -10,10 +9,6 @@ from megastone.db import DatabaseEntry
 from megastone.errors import MegastoneError
 from .disasm import Instruction
 from .endian import Endian
-
-
-if typing.TYPE_CHECKING:
-    from .architecture import Architecture
 
 
 class AssemblyError(MegastoneError):
@@ -54,7 +49,6 @@ class InstructionSet(DatabaseEntry):
         if endian is not None:
             self.ks_mode |= endian.ks_endian
             self.cs_mode |= endian.cs_endian
-        self.arch: Architecture = None #Will be set by Architecture when added
 
         self.ks_supported = self.ks_arch is not None
         if self.ks_supported:
