@@ -13,7 +13,7 @@ PC_THUMB_MASK = 1
 CPSR_THUMB_MASK = 1 << 5
 
 
-class ARMInstructionSet(InstructionSet):
+class BaseARMInstructionSet(InstructionSet):
     def __init__(self, **kwargs):
         kwargs.update(
             insn_alignment=min(kwargs['insn_sizes']),
@@ -23,7 +23,25 @@ class ARMInstructionSet(InstructionSet):
         super().__init__(**kwargs)
 
 
-class ThumbInstructionSet(ARMInstructionSet):
+class ARMInstructionSet(BaseARMInstructionSet):
+    def __init__(self, **kwargs):
+        kwargs.update(
+            insn_sizes=[4],
+            ks_mode=keystone.KS_MODE_ARM,
+            cs_mode=capstone.CS_MODE_ARM
+        )
+        super().__init__(**kwargs)
+
+
+class ThumbInstructionSet(BaseARMInstructionSet):
+    def __init__(self, **kwargs):
+        kwargs.update(
+            insn_sizes=[2, 4],
+            ks_mode=keystone.KS_MODE_THUMB,
+            cs_mode=capstone.CS_MODE_THUMB
+        )
+        super().__init__(**kwargs)
+
     def address_to_pointer(self, address: int):
         return address | PC_THUMB_MASK
 
@@ -46,7 +64,8 @@ class ARMArchitecture(Architecture):
             retval_name='r0',
             retaddr_name='lr',
             uc_arch=unicorn.UC_ARCH_ARM,
-            uc_mode=unicorn.UC_MODE_ARM
+            uc_mode=unicorn.UC_MODE_ARM,
+            gdb_name='arm'
         )
         super().__init__(**kwargs)
         self.arm = arm_isa
@@ -76,17 +95,12 @@ ARM_REGS = RegisterSet.from_libs('arm')
 ISA_ARM = ARMInstructionSet(
     name='arm',
     alt_names=['arm32', 'armle'],
-    insn_sizes=[4],
-    ks_mode=keystone.KS_MODE_ARM,
-    cs_mode=capstone.CS_MODE_ARM,
     endian=Endian.LITTLE
 )
 
 ISA_THUMB = ThumbInstructionSet(
     name='thumb',
-    insn_sizes=[2, 4],
-    ks_mode=keystone.KS_MODE_THUMB,
-    cs_mode=capstone.CS_MODE_THUMB,
+    alt_names=['thumble'],
     endian=Endian.LITTLE
 )
 
@@ -96,6 +110,26 @@ ARCH_ARM = ARMArchitecture(
     endian=Endian.LITTLE,
     arm_isa=ISA_ARM,
     thumb_isa=ISA_THUMB,
-    gdb_name='arm'
 )
 ARCH_ARM.add_to_db()
+
+
+ISA_ARMBE = ARMInstructionSet(
+    name='armbe',
+    alt_names=['arm32be'],
+    endian=Endian.BIG
+)
+
+ISA_THUMBBE = ThumbInstructionSet(
+    name='thumbbe',
+    endian=Endian.BIG
+)
+
+ARCH_ARMBE = ARMArchitecture(
+    name='armbe',
+    alt_names=['arm32be'],
+    endian=Endian.BIG,
+    arm_isa=ISA_ARMBE,
+    thumb_isa=ISA_THUMBBE
+)
+ARCH_ARMBE.add_to_db()

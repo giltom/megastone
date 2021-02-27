@@ -38,8 +38,8 @@ def dbg():
     return get_emulator(ARCH_ARM, ARCH_ARM.arm)
 
 @pytest.fixture
-def armthumb_dbg(arm_isa, other_arm_isa):
-    emu = get_emulator(ARCH_ARM, arm_isa)
+def armthumb_dbg(arm_arch, arm_isa, other_arm_isa):
+    emu = get_emulator(arm_arch, arm_isa)
     map_code_segment(emu, 'code2', CODE2_ADDRESS, other_arm_isa)
     return emu
 
