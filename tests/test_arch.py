@@ -61,3 +61,7 @@ def test_bad_word(arch):
 def test_not_found():
     with pytest.raises(NotFoundError):
         Architecture.by_name('fake')
+
+def test_double_register():
+    with pytest.raises(RuntimeError):
+        ARCH_ARM.add_to_db()

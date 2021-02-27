@@ -23,7 +23,10 @@ class DatabaseEntry:
     @classmethod
     def register(cls, instance):
         """Register a new instance of this class in the database."""
+        if instance in cls._instances:
+            raise RuntimeError('Instance is already registered')
         cls._instances.append(instance)
+        cls._instances.sort(key=lambda i: i.name)
 
     @classmethod
     def by_name(cls: Type[T], name) -> T:

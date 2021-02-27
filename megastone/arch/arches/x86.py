@@ -28,7 +28,7 @@ class X86Architecture(SimpleArchitecture):
 
 ARCH_X86_16 = X86Architecture(
     name='x86-16',
-    alt_names=['x86_16', 'x8616', 'x86-realmode'],
+    alt_names=['x86_16', 'x8616', 'x86-realmode', '8086'],
     bits=16,
     pc_name='ip',
     sp_name='sp',
