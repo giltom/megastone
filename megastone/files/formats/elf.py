@@ -178,5 +178,5 @@ class ELFFile(ExecFile):
 FORMAT_ELF = ELFFormat(
     name='elf',
     magic=b'\x7fELF',
-    extensions=['.elf', '.o']
+    extensions=['.elf', '.o', '.so']
 )
