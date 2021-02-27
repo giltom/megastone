@@ -1,7 +1,8 @@
+from megastone.arch.arches.mips import MIPS32Architecture
 import platform
 import pytest
 
-from megastone import Architecture, ARCH_ARM, AssemblyError, DisassemblyError, NotFoundError
+from megastone import Architecture, ARCH_ARM, AssemblyError, DisassemblyError, NotFoundError, MIPSArchitecture, ARCH_MIPS, ARCH_MIPSLE, ARCH_MIPS64, ARCH_MIPS64LE
 
 
 def test_native():
@@ -64,4 +65,8 @@ def test_not_found():
 
 def test_double_register():
     with pytest.raises(RuntimeError):
-        ARCH_ARM.add_to_db()
+        Architecture._db.register(ARCH_ARM)
+
+def test_hierarchy():
+    assert set(MIPSArchitecture.all()) == {ARCH_MIPS, ARCH_MIPS64, ARCH_MIPSLE, ARCH_MIPS64LE}
+    assert set(MIPS32Architecture.all()) == {ARCH_MIPS, ARCH_MIPSLE}

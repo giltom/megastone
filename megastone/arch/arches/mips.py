@@ -54,32 +54,29 @@ class MIPS64Architecture(MIPSArchitecture):
 
 ARCH_MIPS = MIPS32Architecture(
     name='mips',
-    alt_names=['mips32', 'mipseb', 'mips32eb'],
+    alt_names=['mips32', 'mipseb', 'mips32eb', 'mipsbe', 'mips32be'],
     endian=Endian.BIG
 )
 ISA_MIPS = ARCH_MIPS.isa
-ARCH_MIPS.add_to_db()
 
 ARCH_MIPS64 = MIPS64Architecture(
     name='mips64',
-    alt_names=['mips64eb'],
+    alt_names=['mips64eb', 'mips64be'],
     endian=Endian.BIG
 )
 ISA_MIPS64 = ARCH_MIPS64.isa
-ARCH_MIPS64.add_to_db()
 
 
 ARCH_MIPSLE = MIPS32Architecture(
     name='mipsle',
-    alt_names=['mips32le'],
+    alt_names=['mipsel', 'mips32le', 'mips32el'],
     endian=Endian.LITTLE
 )
 ISA_MIPSLE = ARCH_MIPSLE.isa
-ARCH_MIPSLE.add_to_db()
 
 ARCH_MIPS64LE = MIPS64Architecture(
     name='mips64le',
+    alt_names=['mips64el'],
     endian=Endian.LITTLE
 )
 ISA_MIPS64LE = ARCH_MIPS64LE.isa
-ARCH_MIPS64LE.add_to_db()

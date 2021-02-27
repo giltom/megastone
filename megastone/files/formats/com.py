@@ -14,4 +14,3 @@ FORMAT_COM = COMFormat(
     alt_names=['dos'],
     extensions=['.com']
 )
-ExecFormat.register(FORMAT_COM)

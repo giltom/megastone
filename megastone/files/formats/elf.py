@@ -171,4 +171,3 @@ FORMAT_ELF = ELFFormat(
     magic=b'\x7fELF',
     extensions=['.elf', '.o']
 )
-ExecFormat.register(FORMAT_ELF)

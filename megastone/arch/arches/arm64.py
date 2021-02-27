@@ -26,4 +26,3 @@ ARCH_ARM64 = SimpleArchitecture(
     gdb_name='aarch64'
 )
 ISA_ARM64 = ARCH_ARM64.isa
-ARCH_ARM64.add_to_db()

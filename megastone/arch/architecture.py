@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 import platform
 from collections.abc import Iterable
 
@@ -35,9 +34,6 @@ class Architecture(DatabaseEntry):
         uc_mode: int = 0,               #Unicorn mode ID
         gdb_name: str = None            #gdb name of the arch, None if GDB not supported
     ):
-        alt_names = list(alt_names)
-        if gdb_name is not None:
-            alt_names.append(gdb_name)
         super().__init__(name, alt_names)
         self.bits = bits
         self.word_size = bits // 8
@@ -90,12 +86,6 @@ class Architecture(DatabaseEntry):
         if len(data) != self.word_size:
             raise ValueError(f'Invalid word length {len(data)}, expected {self.word_size}')
         return self.endian.decode_int(data, signed=signed)
-
-    def add_to_db(self):
-        """Register this Architecture and all of its InstructionSets in the database so they can be found by by_name()"""
-        Architecture.register(self)
-        for isa in self.isas:
-            InstructionSet.register(isa)
 
     def pointer_to_address(self, pointer):
         """Convert a pointer to a code address (relevant for thumb)."""

@@ -94,42 +94,41 @@ ARM_REGS = RegisterSet.from_libs('arm')
 
 ISA_ARM = ARMInstructionSet(
     name='arm',
-    alt_names=['arm32', 'armle'],
+    alt_names=['arm32', 'armle', 'armel'],
     endian=Endian.LITTLE
 )
 
 ISA_THUMB = ThumbInstructionSet(
     name='thumb',
-    alt_names=['thumble'],
+    alt_names=['thumble', 'thumbel'],
     endian=Endian.LITTLE
 )
 
 ARCH_ARM = ARMArchitecture(
     name='arm',
-    alt_names=['arm32', 'armle'],
+    alt_names=['arm32', 'armle', 'armel'],
     endian=Endian.LITTLE,
     arm_isa=ISA_ARM,
     thumb_isa=ISA_THUMB,
 )
-ARCH_ARM.add_to_db()
 
 
 ISA_ARMBE = ARMInstructionSet(
     name='armbe',
-    alt_names=['arm32be'],
+    alt_names=['arm32be', 'armeb'],
     endian=Endian.BIG
 )
 
 ISA_THUMBBE = ThumbInstructionSet(
     name='thumbbe',
+    alt_names=['thumbbe'],
     endian=Endian.BIG
 )
 
 ARCH_ARMBE = ARMArchitecture(
     name='armbe',
-    alt_names=['arm32be'],
+    alt_names=['arm32be', 'armeb'],
     endian=Endian.BIG,
     arm_isa=ISA_ARMBE,
     thumb_isa=ISA_THUMBBE
 )
-ARCH_ARMBE.add_to_db()

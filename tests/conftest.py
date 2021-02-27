@@ -2,7 +2,7 @@ import tempfile
 
 import pytest
 
-from megastone import Architecture, ARCH_ARM, ARCH_ARMBE
+from megastone import Architecture, ARMArchitecture
 
 
 TEMP_FILE_DATA = b'F' * 0x1000
@@ -34,7 +34,7 @@ def isa(arch_isa):
 def nop(isa):
     return isa.assemble('nop')
 
-@pytest.fixture(params=[(arch, isa) for arch in [ARCH_ARM, ARCH_ARMBE] for isa in arch.isas], ids=get_id)
+@pytest.fixture(params=[(arch, isa) for arch in ARMArchitecture.all() for isa in arch.isas], ids=get_id)
 def arm_arch_isa(request):
     return request.param
 

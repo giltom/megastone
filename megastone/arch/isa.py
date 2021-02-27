@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typing
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable
 
 import keystone
 import capstone

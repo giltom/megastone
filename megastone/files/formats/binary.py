@@ -41,4 +41,3 @@ FORMAT_BINARY = BinaryFormat(
     alt_names=['bin', 'raw', 'shellcode'],
     extensions=['.bin', '.dat']
 )
-ExecFormat.register(FORMAT_BINARY)

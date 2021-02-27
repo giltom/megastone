@@ -41,4 +41,3 @@ FORMAT_IHEX = IHEXFormat(
     magic = b':10',
     extensions=['.hex', '.ihex', '.h86']
 )
-ExecFormat.register(FORMAT_IHEX)
