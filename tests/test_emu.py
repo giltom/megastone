@@ -144,3 +144,16 @@ def test_save_context(emu: Emulator):
 
     emu.restore_context(ctx)
     assert emu.regs.get('r0', 'r2', 'pc') == (1, 56, 0x1050)
+
+def test_copy(emu: Emulator):
+    emu.mem.map(0x1000, 0x80)
+    emu.mem.write_code(0x1000, 'NOP; NOP; NOP')
+    emu.mem.write(0x1040, b'AAAA')
+    emu.jump(0x1000)
+    other = emu.copy()
+
+    emu.mem.write(0x1040, b'BBBB')
+    emu.run(3)
+    assert emu.pc == 0x100C
+    assert other.pc == 0x1000
+    assert other.mem.read(0x1040, 4) == b'AAAA'

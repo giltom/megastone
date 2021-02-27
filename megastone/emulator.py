@@ -193,6 +193,13 @@ class Emulator(Debugger):
         """Restore the CPU from the given context."""
         self._uc.context_restore(ctx)
 
+    def copy(self):
+        """Create a copy of this Emulator, including memory and register state."""
+        ctx = self.save_context()
+        other = Emulator.from_memory(self.mem)
+        other.restore_context(ctx)
+        return other
+
     def _get_flag_retaddr(self) -> int:
         if RET_FLAG_NAME not in self.mem.segments:
             self.mem.allocate(self.arch.max_insn_size, name=RET_FLAG_NAME, perms=AccessType.X)
