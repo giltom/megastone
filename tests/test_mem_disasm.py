@@ -15,7 +15,7 @@ def num_nops(nop):
 def dummy(*args):
     return None
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=[True, False], ids=lambda b: 'no_max_size' if b else 'max_size')
 def mem(request, monkeypatch, arch, isa, nop, num_nops):
     mem = ms.BufferMemory(arch)
     mem.default_isa = isa
@@ -49,7 +49,7 @@ def test_insns(disassembly, nop, real_count):
         assert insn.mnemonic == 'nop'
 
 def test_invalid(arch, mem, nop):
-    if arch is ms.ARCH_MIPS64:
+    if isinstance(arch, ms.MIPS64Architecture):
         return
 
     length = 2
@@ -71,7 +71,7 @@ def test_switch_isa(mem, isa):
 
 @pytest.mark.parametrize(argnames=['num_insns'], argvalues=[[0], [3]])
 def test_error(mem, arch, nop, num_insns):
-    if arch is ms.ARCH_MIPS64:
+    if isinstance(arch, ms.MIPS64Architecture):
         return
 
     patch_address = SEG_ADDRESS + num_insns * len(nop)

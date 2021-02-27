@@ -28,28 +28,58 @@ class MIPSArchitecture(SimpleArchitecture):
         super().__init__(**kwargs)
 
 
-ARCH_MIPS = MIPSArchitecture(
+class MIPS32Architecture(MIPSArchitecture):
+    def __init__(self, **kwargs):
+        kwargs.update(
+            bits=32,
+            ks_mode=ks.KS_MODE_MIPS32,
+            cs_mode=cs.CS_MODE_MIPS32,
+            uc_mode=uc.UC_MODE_MIPS32,
+            gdb_name='mips'
+        )
+        super().__init__(**kwargs)
+
+
+class MIPS64Architecture(MIPSArchitecture):
+    def __init__(self, **kwargs):
+        kwargs.update(
+            bits=64,
+            ks_mode=ks.KS_MODE_MIPS64,
+            cs_mode=cs.CS_MODE_MIPS64,
+            uc_mode=uc.UC_MODE_MIPS64,
+            gdb_name='mips:isa64'
+        )
+        super().__init__(**kwargs)
+
+
+ARCH_MIPS = MIPS32Architecture(
     name='mips',
     alt_names=['mips32', 'mipseb', 'mips32eb'],
-    bits=32,
-    endian=Endian.BIG,
-    ks_mode=ks.KS_MODE_MIPS32,
-    cs_mode=cs.CS_MODE_MIPS32,
-    uc_mode=uc.UC_MODE_MIPS32,
-    gdb_name='mips'
+    endian=Endian.BIG
 )
 ISA_MIPS = ARCH_MIPS.isa
 ARCH_MIPS.add_to_db()
 
-ARCH_MIPS64 = MIPSArchitecture(
+ARCH_MIPS64 = MIPS64Architecture(
     name='mips64',
     alt_names=['mips64eb'],
-    bits=64,
-    endian=Endian.BIG,
-    ks_mode=ks.KS_MODE_MIPS64,
-    cs_mode=cs.CS_MODE_MIPS64,
-    uc_mode=uc.UC_MODE_MIPS64,
-    gdb_name='mips:isa64'
+    endian=Endian.BIG
 )
 ISA_MIPS64 = ARCH_MIPS64.isa
 ARCH_MIPS64.add_to_db()
+
+
+ARCH_MIPSLE = MIPS32Architecture(
+    name='mipsle',
+    alt_names=['mips32le'],
+    endian=Endian.LITTLE
+)
+ISA_MIPSLE = ARCH_MIPSLE.isa
+ARCH_MIPSLE.add_to_db()
+
+ARCH_MIPS64LE = MIPS64Architecture(
+    name='mips64le',
+    endian=Endian.LITTLE
+)
+ISA_MIPS64LE = ARCH_MIPS64LE.isa
+ARCH_MIPS64LE.add_to_db()
