@@ -13,7 +13,7 @@ from megastone.rsp.connection import RSPConnection
 
 
 PORT = 1337
-GDB_ARCHES = [ms.ARCH_ARM, ms.ARCH_ARM64, ms.ARCH_X86, ms.ARCH_X86_64, ms.ARCH_MIPS, ms.ARCH_MIPS64]
+GDB_ARCHES = [arch for arch in ms.Architecture.all() if arch.gdb_supported]
 CODE_ADDRESS = 0x1000
 DATA_ADDRESS = 0x2000
 REG_VALUE = 0xDEADBEEF
