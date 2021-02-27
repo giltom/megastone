@@ -47,8 +47,7 @@ class MIPS64Architecture(MIPSArchitecture):
             bits=64,
             ks_mode=ks.KS_MODE_MIPS64,
             cs_mode=cs.CS_MODE_MIPS64,
-            uc_mode=uc.UC_MODE_MIPS64,
-            gdb_name='mips:isa64'
+            uc_mode=uc.UC_MODE_MIPS64
         )
         super().__init__(**kwargs)
 
