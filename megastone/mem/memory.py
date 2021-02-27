@@ -3,12 +3,16 @@ from __future__ import annotations
 import abc
 from pathlib import Path
 import shutil
+from typing import TYPE_CHECKING
 
 from megastone.arch import Architecture, InstructionSet, DisassemblyError
 from megastone.util import Closeable
 from .errors import MemoryAccessError
 from .memory_io import StreamMemoryIO, MemoryIO
-from .access import AccessType, Access
+
+
+if TYPE_CHECKING:
+    from .segments import Segment
 
 
 class Memory(Closeable):
@@ -120,6 +124,10 @@ class Memory(Closeable):
             print(f'Assemble "{assembly}" => {code.hex().upper()}')
         self.write(address, code)
         return len(code)
+
+    def write_segment(self, segment: Segment):
+        """Write the contents of the given Segment to this Memory."""
+        self.write(segment.address, segment.read())
 
     def disassemble_one(self, address, isa=None):
         """Disassemble the instruction at the given address and return it."""
@@ -286,7 +294,7 @@ class Memory(Closeable):
         self.write(key.start, value)
 
     def close(self):
-        """Perform any neede cleanup."""
+        """Perform any needed cleanup."""
         pass
 
     def _check_slice(self, key):

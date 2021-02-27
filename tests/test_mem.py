@@ -318,3 +318,11 @@ def test_bad_split_write(mem):
         mem.write(seg.end-2, b'AAAA')
     
     assert info.value.access == Access.write(seg.end-2, b'AAAA')
+
+
+def test_write_seg(mem):
+    data = b'babafafa'
+    other_mem = BufferMemory(ARCH_ARM)
+    seg = other_mem.load(SEG_ADDRESS, data)
+    mem.write_segment(seg)
+    assert mem.read(SEG_ADDRESS, len(data)) == data
