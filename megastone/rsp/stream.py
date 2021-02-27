@@ -1,12 +1,7 @@
 import abc
 import socket
-import selectors
-import os
 import platform
 import logging
-
-import serial
-
 
 from megastone.util import Closeable
 

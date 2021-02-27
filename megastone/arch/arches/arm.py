@@ -4,7 +4,7 @@ import capstone
 import capstone.arm_const
 
 from ..architecture import Architecture, Endian
-from ..regs import BaseRegisterState, RegisterSet
+from ..regs import RegisterState, RegisterSet
 from ..isa import InstructionSet
 from megastone.errors import MegastoneError
 
@@ -58,7 +58,7 @@ class ARMArchitecture(Architecture):
     def isa_from_pointer(self, pointer):
         return self._get_isa(pointer & 1)
 
-    def isa_from_regs(self, regs: BaseRegisterState):
+    def isa_from_regs(self, regs: RegisterState):
         return self._get_isa(regs.cpsr & CPSR_THUMB_MASK)
 
     def _get_isa(self, thumb):

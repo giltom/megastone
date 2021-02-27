@@ -100,7 +100,7 @@ class RegisterSet(NamespaceMapping[Register]):
         return name in self._regs
 
 
-class BaseRegisterState(NamespaceMapping[int]):
+class RegisterState(NamespaceMapping[int]):
     """
     Base class representing the current register state in the CPU.
     

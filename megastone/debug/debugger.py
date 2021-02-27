@@ -4,7 +4,7 @@ import enum
 import functools
 
 from megastone.mem import Memory, Access
-from megastone.arch import Register, BaseRegisterState, InstructionSet
+from megastone.arch import Register, RegisterState, InstructionSet
 from .hooks import HOOK_STOP, Hook, HookFunc, HOOK_BREAK, ReplaceFunctionHookFunc, HookType
 
 
@@ -23,10 +23,10 @@ class StopReason:
 class Debugger(abc.ABC):
     """Abstract Debugger class. Provides access to memory, registers and start/stop/step/continue controls."""
 
-    def __init__(self, mem: Memory):
+    def __init__(self, mem: Memory, regs: RegisterState):
         self.mem = mem
         self.arch = self.mem.arch
-        self.regs = RegisterState(self)
+        self.regs = regs
         self.stack = StackView(self)
         self.curr_hook: Hook = None
         self.curr_access: Access = None
@@ -235,14 +235,6 @@ class Debugger(abc.ABC):
         wrapped = ReplaceFunctionHookFunc(func)
         return self.add_code_hook(wrapped, address)
 
-    @abc.abstractmethod
-    def _read_reg(self, reg: Register) -> int:
-        pass
-
-    @abc.abstractmethod
-    def _write_reg(self, reg: Register, value):
-        pass
-
 
 class StackView:
     """
@@ -278,17 +270,3 @@ class StackView:
         value = self[0]
         self._dbg.sp += self._dbg.arch.word_size
         return value
-
-
-class RegisterState(BaseRegisterState):
-    """Helper class used to access registers."""
-
-    def __init__(self, dbg: Debugger):
-        super().__init__(dbg.arch)
-        self._dbg = dbg
-
-    def read(self, reg) -> Register:
-        return self._dbg._read_reg(reg)
-
-    def write(self, reg, value):
-        return self._dbg._write_reg(reg, value)

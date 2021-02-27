@@ -7,7 +7,7 @@ import unicorn
 
 from megastone.debug import CPUError, Debugger, Hook, InvalidInsnError, MemFaultError, FaultCause, HookType
 from megastone.mem import MappableMemory, Access, AccessType, Segment, SegmentMemory
-from megastone.arch import Architecture, Register
+from megastone.arch import Architecture, Register, RegisterState
 from megastone.util import round_up, round_down
 from megastone.errors import UnsupportedError, warning
 from megastone.files import ExecFile
@@ -135,6 +135,18 @@ class UnicornMemory(MappableMemory):
         return None
 
 
+class UnicornRegisterState(RegisterState):
+    def __init__(self, arch, uc: unicorn.Uc):
+        super().__init__(arch)
+        self._uc = uc
+
+    def read(self, reg: Register):
+        return self._uc.reg_read(reg.uc_id)
+
+    def write(self, reg: Register, value):
+        self._uc.reg_write(reg.uc_id, value)
+
+
 class Emulator(Debugger):
     """Emulator based on the Unicorn engine. Implements the full Debugger interface."""
 
@@ -144,7 +156,9 @@ class Emulator(Debugger):
 
     def __init__(self, arch: Architecture):
         uc = arch.create_uc()
-        super().__init__(UnicornMemory(arch, uc))
+        mem = UnicornMemory(arch, uc)
+        regs = UnicornRegisterState(arch, uc)
+        super().__init__(mem, regs)
 
         self._uc = uc
         self._stopped = False
@@ -204,12 +218,6 @@ class Emulator(Debugger):
         if RET_FLAG_NAME not in self.mem.segments:
             self.mem.allocate(self.arch.max_insn_size, name=RET_FLAG_NAME, perms=AccessType.X)
         return self.mem.segments[RET_FLAG_NAME].address
-
-    def _read_reg(self, reg: Register) -> int:
-        return self._uc.reg_read(reg.uc_id)
-
-    def _write_reg(self, reg: Register, value):
-        return self._uc.reg_write(reg.uc_id, value)
 
     def _run(self, count=None):
         start = self.isa.address_to_pointer(self.pc)

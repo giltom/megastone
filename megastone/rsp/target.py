@@ -8,8 +8,7 @@ import io
 import logging
 
 
-from megastone.arch import Architecture, BaseRegisterState
-from .connection import ParsingError, parse_hex, encode_hex
+from megastone.arch import Architecture
 
 
 PATH = Path(__file__).parent

@@ -9,7 +9,7 @@ import unicorn
 from megastone.db import DatabaseEntry
 from megastone.util import bits_to_mask, size_to_mask
 from .isa import InstructionSet
-from .regs import BaseRegisterState, Register, RegisterSet
+from .regs import RegisterState, Register, RegisterSet
 
 
 class Endian(enum.Enum):
@@ -120,8 +120,8 @@ class Architecture(DatabaseEntry):
         """Try to determine the current ISA from an address."""
         return self.isa
 
-    def isa_from_regs(self, regs: BaseRegisterState):
-        """Determine the current ISA from a BaseRegisterState."""
+    def isa_from_regs(self, regs: RegisterState):
+        """Determine the current ISA from a RegisterState."""
         return self.isa
 
 
