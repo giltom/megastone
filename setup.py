@@ -19,7 +19,8 @@ setuptools.setup(
             'megaasm=megastone.tools.megaasm:main',
             'megaarches=megastone.tools.megaarches:main',
             'megadisasm=megastone.tools.megadisasm:main',
-            'megaformats=megastone.tools.megaformats:main'
+            'megaformats=megastone.tools.megaformats:main',
+            'megaemu=megastone.tools.megaemu:main'
         ]
     },
     package_data = {
