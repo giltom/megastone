@@ -23,6 +23,7 @@ ARCH_ARM64 = SimpleArchitecture(
     ks_arch=keystone.KS_ARCH_ARM64,
     cs_arch=capstone.CS_ARCH_ARM64,
     uc_arch=unicorn.UC_ARCH_ARM64,
-    gdb_name='aarch64'
+    gdb_name='aarch64',
+    elf_machine='EM_AARCH64'
 )
 ISA_ARM64 = ARCH_ARM64.isa

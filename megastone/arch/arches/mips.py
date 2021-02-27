@@ -23,7 +23,8 @@ class MIPSArchitecture(SimpleArchitecture):
             pc_name='pc',
             sp_name='sp',
             retval_name='v0',
-            retaddr_name='ra'
+            retaddr_name='ra',
+            elf_machine='EM_MIPS'
         )
         super().__init__(**kwargs)
 

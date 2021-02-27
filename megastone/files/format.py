@@ -52,3 +52,12 @@ class ExecFormat(DatabaseEntry, metaclass=abc.ABCMeta):
             if extension in instance.extensions:
                 return instance
         return None
+
+
+def load_file(file, format='auto', **kwargs):
+    if not isinstance(format, ExecFormat):
+        format = ExecFormat.by_name(format)
+    if isinstance(file, str) or isinstance(file, Path):
+        return format.parse_file(file, **kwargs)
+    else:
+        return format.parse_fileobj(file)

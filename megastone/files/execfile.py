@@ -25,6 +25,7 @@ class ExecFile:
         self.format = format
         self.mem = mem
         self.arch = self.mem.arch
+        self.segments = self.mem.segments
         self.entry = entry
         self.symbols: dict[str, int] = dict(symbols) if symbols is not None else {}
 

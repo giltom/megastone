@@ -6,9 +6,9 @@ from elftools.elf.constants import P_FLAGS, SH_FLAGS
 
 from ..execfile import ExecFile
 from ..format import ExecFormat
-from megastone.mem import Access, AccessType, Segment, MemoryAccessError
+from megastone.mem import AccessType, Segment
 from megastone.mem.segments import SplittingSegmentMemory, DictSegmentMemory
-from megastone.arch import Architecture
+from megastone.arch import Architecture, Endian
 from megastone.errors import UnsupportedError
 
 
@@ -78,9 +78,18 @@ class ELFSegmentSegment(BaseELFSegment):
         return self._segment['p_filesz']
 
 
+def get_elf_arch(elf: elffile.ELFFile):
+    endian = Endian.LITTLE if elf.little_endian else Endian.BIG
+    machine = elf['e_machine']
+    for arch in Architecture.all():
+        if arch.endian == endian and arch.bits == elf.elfclass and arch.elf_machine == machine:
+            return arch
+    raise UnsupportedError(f'ELF architecture not supported: machine={machine}, endian={endian.name}, bits={elf.elfclass}')
+
+
 class BaseELFMemory(DictSegmentMemory, SplittingSegmentMemory):
     def __init__(self, elf: elffile.ELFFile):
-        super().__init__(Architecture.by_name(elf.get_machine_arch()))
+        super().__init__(get_elf_arch(elf))
 
         for segment in self._parse_segments(elf):
             self._add_segment(segment)

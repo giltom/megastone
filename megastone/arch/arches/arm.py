@@ -65,7 +65,8 @@ class ARMArchitecture(Architecture):
             retaddr_name='lr',
             uc_arch=unicorn.UC_ARCH_ARM,
             uc_mode=unicorn.UC_MODE_ARM,
-            gdb_name='arm'
+            gdb_name='arm',
+            elf_machine='EM_ARM'
         )
         super().__init__(**kwargs)
         self.arm = arm_isa

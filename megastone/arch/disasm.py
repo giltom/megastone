@@ -64,6 +64,8 @@ class Instruction:
         return len(self.cs_insn.operands)
 
     def __str__(self):
+        if not self.op_string:
+            return self.mnemonic
         return f'{self.mnemonic} {self.op_string}'
 
     def __repr__(self):

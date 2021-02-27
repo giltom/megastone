@@ -32,7 +32,8 @@ class Architecture(DatabaseEntry):
         retval_name: str = None,        #Name of register containing return value
         uc_arch: int = None,            #Unicorn arch ID, None if unicorn isn't supported
         uc_mode: int = 0,               #Unicorn mode ID
-        gdb_name: str = None            #gdb name of the arch, None if GDB not supported
+        gdb_name: str = None,            #gdb name of the arch, None if GDB not supported
+        elf_machine: str = None         #string EM_* constant in ELF file
     ):
         super().__init__(name, alt_names)
         self.bits = bits
@@ -47,6 +48,7 @@ class Architecture(DatabaseEntry):
         self.uc_arch = uc_arch
         self.uc_mode = uc_mode | endian.uc_endian
         self.gdb_name = gdb_name
+        self.elf_machine = elf_machine
 
         self.default_isa = self.isas[0]
         self.word_mask = bits_to_mask(self.bits)
@@ -57,6 +59,7 @@ class Architecture(DatabaseEntry):
         self.uc_supported = self.uc_arch is not None
         self.fully_supported = self.uc_supported and all(isa.ks_supported and isa.cs_supported for isa in self.isas)
         self.gdb_supported = self.gdb_name is not None
+        self.elf_supported = self.elf_machine is not None
 
     @staticmethod
     def native():
@@ -118,7 +121,8 @@ class SimpleArchitecture(Architecture):
         cs_mode: int = 0,   
         uc_arch: int = None,   
         uc_mode: int = 0,
-        gdb_name: str = None
+        gdb_name: str = None,
+        elf_machine: str = None
     ):
         isa = InstructionSet(
             name=name,
@@ -145,5 +149,6 @@ class SimpleArchitecture(Architecture):
             retval_name=retval_name,
             uc_arch=uc_arch,
             uc_mode=uc_mode,
-            gdb_name=gdb_name
+            gdb_name=gdb_name,
+            elf_machine=elf_machine
         )
