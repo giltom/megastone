@@ -326,3 +326,7 @@ def test_write_seg(mem):
     seg = other_mem.load(SEG_ADDRESS, data)
     mem.write_segment(seg)
     assert mem.read(SEG_ADDRESS, len(data)) == data
+
+
+def test_repr(mem):
+    assert repr(mem) == "<BufferMemory, arch='arm'>"

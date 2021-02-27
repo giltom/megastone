@@ -43,6 +43,9 @@ class Memory(Closeable):
         """
         pass
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__}, arch={self.arch.name!r}>'
+
     def read(self, address, size):
         return self._read(address, size)
 
