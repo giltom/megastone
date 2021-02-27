@@ -33,9 +33,9 @@ ARCH_MIPS = MIPSArchitecture(
     alt_names=['mips32', 'mipseb', 'mips32eb'],
     bits=32,
     endian=Endian.BIG,
-    ks_mode=ks.KS_MODE_MIPS32 | ks.KS_MODE_BIG_ENDIAN,
-    cs_mode=cs.CS_MODE_MIPS32 | cs.CS_MODE_BIG_ENDIAN,
-    uc_mode=uc.UC_MODE_MIPS32 | uc.UC_MODE_BIG_ENDIAN,
+    ks_mode=ks.KS_MODE_MIPS32,
+    cs_mode=cs.CS_MODE_MIPS32,
+    uc_mode=uc.UC_MODE_MIPS32,
     gdb_name='mips'
 )
 ISA_MIPS = ARCH_MIPS.isa
@@ -46,9 +46,9 @@ ARCH_MIPS64 = MIPSArchitecture(
     alt_names=['mips64eb'],
     bits=64,
     endian=Endian.BIG,
-    ks_mode=ks.KS_MODE_MIPS64 | ks.KS_MODE_BIG_ENDIAN,
-    cs_mode=cs.CS_MODE_MIPS64 | cs.CS_MODE_BIG_ENDIAN,
-    uc_mode=uc.UC_MODE_MIPS64 | uc.UC_MODE_BIG_ENDIAN,
+    ks_mode=ks.KS_MODE_MIPS64,
+    cs_mode=cs.CS_MODE_MIPS64,
+    uc_mode=uc.UC_MODE_MIPS64,
     gdb_name='mips:isa64'
 )
 ISA_MIPS64 = ARCH_MIPS64.isa

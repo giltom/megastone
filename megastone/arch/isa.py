@@ -9,6 +9,7 @@ import capstone
 from megastone.db import DatabaseEntry
 from megastone.errors import MegastoneError
 from .disasm import Instruction
+from .endian import Endian
 
 
 if typing.TYPE_CHECKING:
@@ -38,7 +39,8 @@ class InstructionSet(DatabaseEntry):
         ks_arch: int = None,     #Keystone arch ID, None if keystone isn't supported
         ks_mode: int = 0,        #Keystone mode ID
         cs_arch: int = None,     #Capstone arch ID, None if capstone isn't supported
-        cs_mode: int = 0        #Capstone mode ID
+        cs_mode: int = 0,        #Capstone mode ID
+        endian: Endian = None    #endian for automatic mode flags
     ):
         super().__init__(name, alt_names)
         self.insn_alignment = insn_alignment
@@ -49,6 +51,9 @@ class InstructionSet(DatabaseEntry):
         self.ks_mode = ks_mode
         self.cs_arch = cs_arch
         self.cs_mode = cs_mode
+        if endian is not None:
+            self.ks_mode |= endian.ks_endian
+            self.cs_mode |= endian.cs_endian
         self.arch: Architecture = None #Will be set by Architecture when added
 
         self.ks_supported = self.ks_arch is not None

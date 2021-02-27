@@ -46,7 +46,7 @@ class ARMArchitecture(Architecture):
             retval_name='r0',
             retaddr_name='lr',
             uc_arch=unicorn.UC_ARCH_ARM,
-            uc_mode=unicorn.UC_MODE_ARM | unicorn.UC_MODE_LITTLE_ENDIAN
+            uc_mode=unicorn.UC_MODE_ARM
         )
         super().__init__(**kwargs)
         self.arm = arm_isa
@@ -77,15 +77,17 @@ ISA_ARM = ARMInstructionSet(
     name='arm',
     alt_names=['arm32', 'armle'],
     insn_sizes=[4],
-    ks_mode=keystone.KS_MODE_ARM | keystone.KS_MODE_LITTLE_ENDIAN,
-    cs_mode=capstone.CS_MODE_ARM | capstone.CS_MODE_LITTLE_ENDIAN
+    ks_mode=keystone.KS_MODE_ARM,
+    cs_mode=capstone.CS_MODE_ARM,
+    endian=Endian.LITTLE
 )
 
 ISA_THUMB = ThumbInstructionSet(
     name='thumb',
     insn_sizes=[2, 4],
-    ks_mode=keystone.KS_MODE_THUMB | keystone.KS_MODE_LITTLE_ENDIAN,
-    cs_mode=capstone.CS_MODE_THUMB | capstone.CS_MODE_LITTLE_ENDIAN
+    ks_mode=keystone.KS_MODE_THUMB,
+    cs_mode=capstone.CS_MODE_THUMB,
+    endian=Endian.LITTLE
 )
 
 ARCH_ARM = ARMArchitecture(

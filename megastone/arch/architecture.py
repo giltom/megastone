@@ -7,25 +7,10 @@ from collections.abc import Iterable
 import unicorn
 
 from megastone.db import DatabaseEntry
-from megastone.util import bits_to_mask, size_to_mask
+from megastone.util import bits_to_mask
 from .isa import InstructionSet
 from .regs import RegisterState, Register, RegisterSet
-
-
-class Endian(enum.Enum):
-    LITTLE = 'little'
-    BIG = 'big'
-
-    def decode_int(self, data, *, signed=False):
-        """Convert bytes to int in this endian"""
-        return int.from_bytes(data, self.value, signed=signed)
-    
-    def encode_int(self, value: int, size):
-        """Convert int to bytes in this endian"""
-        if value < 0:
-            value = value & size_to_mask(size)
-        return value.to_bytes(size, self.value)
-
+from .endian import Endian
 
 
 class Architecture(DatabaseEntry):
@@ -64,7 +49,7 @@ class Architecture(DatabaseEntry):
         self.retaddr_reg = regs[retaddr_name] if retaddr_name is not None else None
         self.retval_reg = regs[retval_name] if retval_name is not None else None
         self.uc_arch = uc_arch
-        self.uc_mode = uc_mode
+        self.uc_mode = uc_mode | endian.uc_endian
         self.gdb_name = gdb_name
 
         for isa in self.isas:
@@ -156,7 +141,8 @@ class SimpleArchitecture(Architecture):
             ks_arch=ks_arch,
             ks_mode=ks_mode,
             cs_arch=cs_arch,
-            cs_mode=cs_mode
+            cs_mode=cs_mode,
+            endian=endian
         )
 
         return super().__init__(
