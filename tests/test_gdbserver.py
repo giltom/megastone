@@ -278,6 +278,9 @@ def test_help(server):
 def test_bad_cmd(server):
     assert 'Unknown' in server._handle_monitor_command_string('badbad')
 
+def test_ambig_cmd(server):
+    assert 'Ambiguous' in server._handle_monitor_command_string('e')
+
 def test_segments(emu, server):
     output = server._handle_monitor_command_string('seg')
     for seg in emu.mem.segments:

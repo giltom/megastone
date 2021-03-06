@@ -39,9 +39,9 @@ def process(exe_path):
             raise ValueError('megaemu crashed')
     
 @pytest.fixture
-def dbg(process, gdb_arch):
-    msgdb.set_endian(gdb_arch.endian)
+def dbg(process):
     msgdb.execute(f'target remote tcp:localhost:{PORT}')
+    msgdb.auto_config_endian()
     try:
         yield msgdb.GDBDebugger()
     finally:

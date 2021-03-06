@@ -99,7 +99,8 @@ class GDBServer:
             _MonitorCommand('megastone', self._handle_megastone, 'Check whether the server is a Megastone server.'),
             _MonitorCommand('segments', self._handle_segments, 'Print the list of Segments.'),
             _MonitorCommand('info', self._handle_info, 'Print information about the Megastone configuration.'),
-            _MonitorCommand('error', self._handle_error, 'Print information about the last CPU error.')
+            _MonitorCommand('error', self._handle_error, 'Print information about the last CPU error.'),
+            _MonitorCommand('endian', self._handle_endian, 'Print the endian of the server.')
         ]
 
     def run(self, *, persistent=False):
@@ -438,6 +439,9 @@ class GDBServer:
         if self._stop_exception is None:
             return 'No CPU error occurred.'
         return str(self._stop_exception)
+
+    def _handle_endian(self):
+        return self.dbg.arch.endian.name
 
 def _get_field_width(values, title):
     max_value = max(values)

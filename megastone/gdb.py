@@ -40,6 +40,20 @@ def get_arch():
     raise UnsupportedError(f'Unsupported GDB architecture: {name}, endian={endian.name}')
 
 
+def is_megastone_server():
+    return 'true' in execute('monitor megastone')
+
+
+def auto_config_endian():
+    endian_name = execute('monitor endian').strip()
+    try:
+        endian = Endian[endian_name]
+    except KeyError:
+        raise MegastoneError('Server isn\'t a Megastone server') from None
+    set_endian(endian)
+    return endian
+
+
 class GDBRegisterState(RegisterState):
     def __init__(self):
         super().__init__(get_arch())
