@@ -30,7 +30,7 @@ setuptools.setup(
     install_requires=[
         'keystone-engine',
         'capstone',
-        'unicorn',
+        'unicorn==1.0.2',
         'pyelftools',
         'bincopy'
     ],
