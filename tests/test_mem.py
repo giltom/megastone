@@ -2,7 +2,7 @@ import pytest
 import io
 
 
-from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError, MappableMemory, Access
+from megastone import BufferMemory, ARCH_ARM, SegmentMemory, Memory, ISA_X86, MemoryAccessError, AccessType, ARCH_X86, MegastoneError, MappableMemory, Access, AddressRange
 
 from .conftest import TEMP_FILE_DATA
 
@@ -263,9 +263,14 @@ def test_access_str(mem):
     assert str(AccessType.RW) == 'RW'
 
 def test_seg_contains(mem):
-    assert SEG_ADDRESS in mem.segments.seg
-    assert SEG_ADDRESS+SEG_SIZE not in mem.segments.seg
-    assert 'hello' not in mem.segments.seg
+    seg = mem.segments.seg
+    assert seg.contains(SEG_ADDRESS)
+    assert not seg.contains(SEG_ADDRESS+SEG_SIZE)
+    assert seg.contains(AddressRange(SEG_ADDRESS+2, 3))
+    assert not seg.contains(AddressRange(SEG_ADDRESS-1, 2))
+    assert not seg.contains(AddressRange(SEG_ADDRESS+SEG_SIZE-2, 5))
+    with pytest.raises(ValueError):
+        seg.contains('aaa')
 
 def test_seg_addresses(mem):
     assert list(mem.segments.seg.addresses(5)) == list(range(SEG_ADDRESS, SEG_ADDRESS + SEG_SIZE, 5))

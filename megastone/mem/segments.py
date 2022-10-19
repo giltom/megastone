@@ -110,7 +110,7 @@ class SegmentMemory(Memory):
             seg = self.segments.by_address(address)
         except KeyError:
             return False
-        return address + size - 1 in seg
+        return seg.contains(address + size - 1)
 
     @abc.abstractmethod
     def _get_all_segments(self) -> Iterable[Segment]:
@@ -131,7 +131,7 @@ class SegmentMemory(Memory):
     def _get_segment_by_address(self, address):
         #Override if more efficient implementation is available
         for seg in self._get_all_segments():
-            if address in seg:
+            if seg.contains(address):
                 return seg
         raise KeyError(f'No segment contains address 0x{address:X}')
 

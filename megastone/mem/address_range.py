@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -25,10 +27,13 @@ class AddressRange:
         """Return True if this segment overlaps other or is immediately next to it (with no gap)."""
         return self.start <= other.end and other.start <= self.end
 
-    def __contains__(self, address):
-        if not isinstance(address, int):
-            return False
-        return self.start <= address < self.end
+    def contains(self, other: int | AddressRange):
+        """Return true if the given address or AddressRange is entirely contained in this range."""
+        if isinstance(other, int):
+            return self.start <= other < self.end
+        if isinstance(other, AddressRange):
+            return self.start <= other.start and other.end <= self.end
+        raise ValueError('Invalid argument for contains()')
 
     def addresses(self, step=1):
         """Return a sequence of addresses with the given step size."""
