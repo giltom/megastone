@@ -33,6 +33,14 @@ class Endian(enum.Enum):
     def uc_endian(self):
         return ENDIAN_TO_UC[self]
 
+    @property
+    def struct_char(self) -> str:
+        return ENDIAN_TO_STRUCT_CHAR[self]
+
+    @property
+    def type_suffix(self) -> str:
+        return self.name[0].lower()
+
 
 ENDIAN_TO_KS = {
     Endian.LITTLE: keystone.KS_MODE_LITTLE_ENDIAN,
@@ -47,4 +55,9 @@ ENDIAN_TO_CS = {
 ENDIAN_TO_UC = {
     Endian.LITTLE: unicorn.UC_MODE_LITTLE_ENDIAN,
     Endian.BIG: unicorn.UC_MODE_BIG_ENDIAN
+}
+
+ENDIAN_TO_STRUCT_CHAR = {
+    Endian.LITTLE: '<',
+    Endian.BIG: '>'
 }

@@ -269,8 +269,6 @@ def test_seg_contains(mem):
     assert seg.contains(AddressRange(SEG_ADDRESS+2, 3))
     assert not seg.contains(AddressRange(SEG_ADDRESS-1, 2))
     assert not seg.contains(AddressRange(SEG_ADDRESS+SEG_SIZE-2, 5))
-    with pytest.raises(ValueError):
-        seg.contains('aaa')
 
 def test_seg_addresses(mem):
     assert list(mem.segments.seg.addresses(5)) == list(range(SEG_ADDRESS, SEG_ADDRESS + SEG_SIZE, 5))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 from typing import TypeVar, Generic
 
@@ -34,7 +36,7 @@ class NamespaceMapping(abc.ABC, Generic[T]):
     """Basic mapping type that supports access by both index and attribute."""
 
     @abc.abstractmethod
-    def __getitem__(self, key) -> T:
+    def __getitem__(self, key: str) -> T:
         pass
 
     def __getattr__(self, attr) -> T:

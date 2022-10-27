@@ -19,21 +19,26 @@ class AddressRange:
         """Alias of `start`."""
         return self.start
 
-    def overlaps(self, other):
+    @staticmethod
+    def _convert_int(address: int | AddressRange):
+        if isinstance(address, AddressRange):
+            return address
+        return AddressRange(address, 1)
+        
+    def overlaps(self, other: int | AddressRange):
         """Return True if this segment overlaps other."""
+        other = self._convert_int(other)
         return self.start < other.end and other.start < self.end
 
-    def adjacent(self, other):
+    def adjacent(self, other: int | AddressRange):
         """Return True if this segment overlaps other or is immediately next to it (with no gap)."""
+        other = self._convert_int(other)
         return self.start <= other.end and other.start <= self.end
 
     def contains(self, other: int | AddressRange):
         """Return true if the given address or AddressRange is entirely contained in this range."""
-        if isinstance(other, int):
-            return self.start <= other < self.end
-        if isinstance(other, AddressRange):
-            return self.start <= other.start and other.end <= self.end
-        raise ValueError('Invalid argument for contains()')
+        other = self._convert_int(other)
+        return self.start <= other.start and other.end <= self.end
 
     def addresses(self, step=1):
         """Return a sequence of addresses with the given step size."""
